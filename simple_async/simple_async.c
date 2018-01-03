@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-//#include <getopt.h>
 #include <errno.h>
 #if HAVE_PNG
 #include <png.h>
@@ -21,12 +20,15 @@
 #define MAX_CANCEL_THREADS 6
 #define nullptr ((void*)0)
 
-typedef struct{
-	int32_t _input;
-	int32_t _output;
+ typedef struct{
+	const unsigned char* _input;
+	char* _output;
+	size_t  _bufferlength;
+	size_t _out_bufsize;
+	
 	napi_ref _callback;
 	napi_async_work _request;
-} carrier;
+}carrier;
 carrier the_carrier;
 carrier async_carrier[MAX_CANCEL_THREADS];
 
@@ -53,9 +55,12 @@ char* buf;
 size_t size;
 size_t mem;
 };
-static const int mn=41;
+//static 
+	const int mn=41;
 static enum imageType image_type = PNG_TYPE;
+static void my_png_write_data(png_structp png_ptr,png_bytep data,png_size_t length){
 struct mem_encode* p=(struct mem_encode*) png_get_io_ptr(png_ptr);
+
 if(!p->buf){
 p->buf=(char*)malloc(sizeof(p->buf)*mn);
 if(!p->buf){png_error(png_ptr,"malloc png error");}
@@ -69,15 +74,30 @@ p->mem=mn;
 	}
 	memcpy(p->buf + p->size,data,length);
 	p->size+=length;
+	//fprintf(stderr,"p->buf: %s\n",p->buf);
+	//fprintf(stderr,"p->size: %zu\n",p->size);
 }
+#if HAVE_PNG
+static void fillRow(unsigned char *row, int num, const unsigned char color[])
+{
+	int i;
+
+	for(i = 0; i < num; i++) {
+		memcpy(row, color, 4);
+		row += 4;
+	}
+}
+#endif
 struct mem_encode writePNG(const QRcode *qrcode, const char *outfile, enum imageType type)
 {
 	printf("OUTFILE: %s\n",outfile);
 #if HAVE_PNG
 	struct mem_encode state;
+	
 	state.buf=NULL;
 	state.size=0;
 	state.mem=0;
+	
 	static FILE *fp; // avoid clobbering by setjmp.
 	png_structp png_ptr;
 	png_infop info_ptr;
@@ -241,14 +261,11 @@ struct mem_encode writePNG(const QRcode *qrcode, const char *outfile, enum image
 
 	png_write_end(png_ptr, info_ptr);
 	png_destroy_write_struct(&png_ptr, &info_ptr);
-//printf("\n\neND of PNG wrITe\n");
-//	printf("Buffer: %s\n",state.buf);
 	fclose(fp);
-	//if(state.buf) free(state.buf);
 	free(row);
 	free(palette);
 return state;
-	//return 0;
+
 #else
 	fputs("\n\nPNG output is disabled at compile time. No output generated.\n", stderr);
 	return 0;
@@ -276,7 +293,7 @@ static QRcode *encode(const unsigned char *intext, int length)
 
 	return code;
 }
-
+/*
 static void qrencode(const unsigned char *intext, int length, const char *outfile)
 {
 	QRcode *qrcode;
@@ -304,41 +321,81 @@ printf("INTEXT: %s\n",intext);
 			fprintf(stderr, "Unknown image type.\n");
 			exit(EXIT_FAILURE);
 	}
-
+	
+	
+fprintf(stderr,"Some data: %s\n",p.buf);
+	fprintf(stderr,"p.size: %zu\n",p.size);
 if(p.buf){free(p.buf);fprintf(stderr,"\np.buf is freed.\n");}else{fprintf(stderr,"p.buf is undefined.\n");}
 	QRcode_free(qrcode);
 }
 
+*/
 
-// node-gyp configure && build // rebuild
 void Execute(napi_env env,void* data){
-#if defined _WIN32
-	Sleep(1000);
-	#else
-	//sleep(1);
-	#endif
-	carrier* c=(carrier*)data;
+
+ carrier* c=(carrier*)data;
+	if(c==NULL){fprintf(stderr,"NULL!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");}
 	if(c !=&the_carrier){
 	napi_throw_type_error(env,nullptr,"wrong data parameter to Execute");
 		return;
 	}
-	c->_output=c->_input*2;
+	
+	struct mem_encode p;
+	QRcode *qrcode;
+printf("INTEXT: %s\n",c->_input);
+	qrcode = encode(c->_input, c->_bufferlength);
+	if(qrcode == NULL) {
+		if(errno == ERANGE) {
+			fprintf(stderr, "Failed to encode the input data: Input data too large\n");
+		} else {
+			perror("Failed to encode the input data");
+		}
+		exit(EXIT_FAILURE);
+	}
+
+
+	printf("image_type: %d%d\n",image_type,qrcode->version);
+
+	switch(image_type) {
+		case PNG_TYPE:
+		case PNG32_TYPE:
+			p=writePNG(qrcode,"-", image_type);
+			break;
+		default:
+			fprintf(stderr, "Unknown image type.\n");
+			exit(EXIT_FAILURE);
+	}
+	//sleep(0.5);
+	c->_output=(char*)malloc(sizeof(c->_output)*p.size);
+	if(c->_output==NULL){fprintf(stderr,"some malloc error\n");}
+     memcpy(c->_output,p.buf,p.size);
+	c->_out_bufsize=p.size;
+	
+if(p.buf){free(p.buf);fprintf(stderr,"\np.buf is freed.\n");}else{fprintf(stderr,"p.buf is undefined.\n");}
+//if(c->_output){free(c->_output);fprintf(stderr,"\n c->_output is freed.\n");}else{fprintf(stderr,"c->_output is UNDEFINED.\n");}
+	QRcode_free(qrcode);
+//sleep(1);
 }
 
 void Complete(napi_env env,napi_status status, void* data){
-carrier* c=(carrier*)data;
+ carrier* c=(carrier*)data;
+	
 	if(c !=&the_carrier){
 	napi_throw_type_error(env,nullptr,"wrong data parameter to Complete");
 		return;
 	}
+	
 	if(status !=napi_ok){
 	napi_throw_type_error(env,nullptr,"execute callback failed.");
 		return;
 	}
+
 	napi_value argv[2];
 	napi_get_null(env,&argv[0]);
-	napi_create_int32(env,c->_output,&argv[1]);
-	
+	fprintf(stderr,"\nDATA!!!!: %s\n",(char*)data);
+status=napi_create_buffer_copy(env,c->_out_bufsize,c->_output,NULL,&argv[1]);	
+	assert(status==napi_ok);
+	if(c->_output){free(c->_output);}
 	napi_value callback;
 	napi_get_reference_value(env,c->_callback,&callback);
 	napi_value global;
@@ -358,16 +415,19 @@ size_t argc=3;
 	void* data;
 	status=napi_get_cb_info(env,info,&argc,argv,&_this,&data);
 	assert(status==napi_ok);
-	if(argc >3){napi_throw_type_error(env,nullptr,"not enough arguments, expected 3?.");
-				return nullptr;
-				}
-	napi_valuetype t;
-	status=napi_typeof(env,argv[0],&t);
-	assert(status==napi_ok);
-	if(t !=napi_number){
-	napi_throw_type_error(env,nullptr,"Wrong first argument, integer expected.");return nullptr;
-	}
+	//if(argc >3){napi_throw_type_error(env,nullptr,"not enough arguments, expected 3?.");
+	//			return nullptr;
+	//			}
+	//napi_valuetype t;
+	//status=napi_typeof(env,argv[0],&t);
+	//assert(status==napi_ok);
+	//if(t !=napi_object){
+	//napi_throw_type_error(env,nullptr,"Wrong first argument, obj or buf expected.");return nullptr;
+	//}
+	//status=napi_is_buffer(env,argv[0],&hasIstance)
+	//assert(status==napi_ok);
 	
+	/*
 	status=napi_typeof(env,argv[1],&t);
 	assert(status==napi_ok);
 	if(t !=napi_object){
@@ -380,8 +440,11 @@ size_t argc=3;
 		napi_throw_type_error(env,nullptr,"wrong third argument, function expected.");
 		return nullptr;
 	}	
-	the_carrier._output=0;
-	status=napi_get_value_int32(env,argv[0],&the_carrier._input);
+	*/
+	//the_carrier._output=NULL;
+	//status=napi_get_value_int32(env,argv[0],&the_carrier._input);
+
+	status=napi_get_buffer_info(env, argv[0],(void**)(&the_carrier._input),&the_carrier._bufferlength);
 	assert(status==napi_ok);
 	
 	
@@ -393,6 +456,7 @@ size_t argc=3;
 	assert(status==napi_ok);
 	status=napi_queue_async_work(env,the_carrier._request);
 	assert(status==napi_ok);
+	//sleep(1);
 	return nullptr;
 	}
 
