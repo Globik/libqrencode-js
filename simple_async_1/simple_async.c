@@ -19,13 +19,20 @@
 #endif
 #define MAX_CANCEL_THREADS 6
 #define nullptr ((void*)0)
-
+/*
  typedef struct{
 	const unsigned char* _input;
 	char* _output;
 	size_t  _bufferlength;
 	size_t _out_bufsize;
 	
+	napi_ref _callback;
+	napi_async_work _request;
+}carrier;
+*/
+typedef struct{
+int32_t _input;
+	int32_t _output;
 	napi_ref _callback;
 	napi_async_work _request;
 }carrier;
@@ -56,7 +63,6 @@ size_t size;
 size_t mem;
 };
 //static 
-int abba=0;
 	const int mn=41;
 static enum imageType image_type = PNG_TYPE;
 static void my_png_write_data(png_structp png_ptr,png_bytep data,png_size_t length){
@@ -91,7 +97,7 @@ static void fillRow(unsigned char *row, int num, const unsigned char color[])
 #endif
 struct mem_encode writePNG(const QRcode *qrcode, const char *outfile, enum imageType type)
 {
-	//printf("OUTFILE: %s\n",outfile);
+	printf("OUTFILE: %s\n",outfile);
 #if HAVE_PNG
 	struct mem_encode state;
 	
@@ -265,7 +271,6 @@ struct mem_encode writePNG(const QRcode *qrcode, const char *outfile, enum image
 	fclose(fp);
 	free(row);
 	free(palette);
-	abba=1;
 return state;
 
 #else
@@ -332,7 +337,8 @@ if(p.buf){free(p.buf);fprintf(stderr,"\np.buf is freed.\n");}else{fprintf(stderr
 }
 
 */
-int labuda=0;
+/*
+
 void Execute(napi_env env,void* data){
 
  carrier* c=(carrier*)data;
@@ -344,7 +350,7 @@ void Execute(napi_env env,void* data){
 	
 	struct mem_encode p;
 	QRcode *qrcode;
-//printf("INTEXT: %s\n",c->_input);
+printf("INTEXT: %s\n",c->_input);
 	qrcode = encode(c->_input, c->_bufferlength);
 	if(qrcode == NULL) {
 		if(errno == ERANGE) {
@@ -356,7 +362,7 @@ void Execute(napi_env env,void* data){
 	}
 
 
-	//printf("image_type: %d%d\n",image_type,qrcode->version);
+	printf("image_type: %d%d\n",image_type,qrcode->version);
 
 	switch(image_type) {
 		case PNG_TYPE:
@@ -367,29 +373,24 @@ void Execute(napi_env env,void* data){
 			fprintf(stderr, "Unknown image type.\n");
 			exit(EXIT_FAILURE);
 	}
-	
+	//sleep(0.5);
 	c->_output=(char*)malloc(sizeof(c->_output)*p.size);
 	if(c->_output==NULL){fprintf(stderr,"some malloc error\n");}
-	//c->_output[1000];
      memcpy(c->_output,p.buf,p.size);
 	c->_out_bufsize=p.size;
-	free(c->_output);
-	labuda=1;
 	
-	if(labuda==1){
-		fprintf(stderr,"length: %zu\n",p.size);
-		free(p.buf);
-		p.buf=NULL;
-		p.size=0;
-		//free(c->_output);
-		//c->_out_bufsize=0;
-	fprintf(stderr,"\nLABUDA IS 1!!!\n");
-		labuda=0;
-	}else{fprintf(stderr,"\nLABUDA IS 0\n");}
-
+if(p.buf){free(p.buf);fprintf(stderr,"\np.buf is freed.\n");}else{fprintf(stderr,"p.buf is undefined.\n");}
+//if(c->_output){free(c->_output);fprintf(stderr,"\n c->_output is freed.\n");}else{fprintf(stderr,"c->_output is UNDEFINED.\n");}
 	QRcode_free(qrcode);
+//sleep(1);
 }
-
+*/
+void Execute(napi_env env,void*data){
+carrier* c=(carrier*)data;
+	if(c !=&the_carrier){napi_throw_type_error(env,nullptr,"wrong data to execute.\n");return;}
+	//sleep(1);
+	c->_output=c->_input*2;
+}
 void Complete(napi_env env,napi_status status, void* data){
  carrier* c=(carrier*)data;
 	
@@ -404,39 +405,33 @@ void Complete(napi_env env,napi_status status, void* data){
 	}
 napi_handle_scope scope;
 	napi_value argv[2];
-	status=napi_open_handle_scope(env,&scope);
+	napi_open_handle_scope(env,&scope);
+	status=napi_get_null(env,&argv[0]);
 	assert(status==napi_ok);
-	napi_get_null(env,&argv[0]);
-	fprintf(stderr,"\nDATA!!!!: %zu\n",c->_out_bufsize);
-status=napi_create_buffer_copy(env,c->_out_bufsize,c->_output,NULL,&argv[1]);	
+	fprintf(stderr,"\nDATA!!!!: %s\n",(char*)data);
+//status=napi_create_buffer_copy(env,c->_out_bufsize,c->_output,NULL,&argv[1]);	
+	status=napi_create_int32(env,c->_output,&argv[1]);
 	assert(status==napi_ok);
 	//if(c->_output){free(c->_output);}
 	napi_value callback;
 	napi_get_reference_value(env,c->_callback,&callback);
 	napi_value global;
-	status=napi_get_global(env,&global);
-	assert(status==napi_ok);
+	napi_get_global(env,&global);
 	napi_value result;
-	fprintf(stderr,"Labuda vor napi_call_func: %d\n",labuda);
-	status=napi_call_function(env,global,callback,2,argv,&result);
-	assert(status==napi_ok);
-	fprintf(stderr,"Labuda vor del_ref: %d\n",labuda);
-	//status=napi_delete_reference(env,c->_callback);
-	//assert(status==napi_ok);
-	//status=napi_delete_async_work(env,c->_request);
-	//assert(status==napi_ok);
-	status=napi_close_handle_scope(env,scope);
-	assert(status==napi_ok);
+	napi_call_function(env,global,callback,2,argv,&result);
+	//napi_delete_reference(env,c->_callback);
+	//napi_delete_async_work(env,c->_request);
+	napi_close_handle_scope(env,scope);
 }
 
 napi_value Test(napi_env env,napi_callback_info info){
+	napi_handle_scope scope;
 size_t argc=3;
 	napi_status status;
 	napi_value argv[3];
 	napi_value _this;
 	napi_value resource_name;
 	void* data;
-	napi_handle_scope scope;
 	status=napi_open_handle_scope(env,&scope);
 	assert(status==napi_ok);
 	status=napi_get_cb_info(env,info,&argc,argv,&_this,&data);
@@ -468,9 +463,9 @@ size_t argc=3;
 	}	
 	*/
 	//the_carrier._output=NULL;
-	//status=napi_get_value_int32(env,argv[0],&the_carrier._input);
+	status=napi_get_value_int32(env,argv[0],&the_carrier._input);
 
-	status=napi_get_buffer_info(env, argv[0],(void**)(&the_carrier._input),&the_carrier._bufferlength);
+	//status=napi_get_buffer_info(env, argv[0],(void**)(&the_carrier._input),&the_carrier._bufferlength);
 	assert(status==napi_ok);
 	
 	
