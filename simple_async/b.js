@@ -3,7 +3,7 @@ const {makeMeasurable}=require('performance-meter');
 
 const str="mama";
 const buf=Buffer.from(str+'\0');
-//ad.Test(buf,{type:'start'},function(err,val){console.log('error: ',err);console.log('val: ',val.toString());});
+ad.Test(buf,{type:'start'},function(err,val){console.log('error: ',err);console.log('valA: ',val.toString('utf8'));});
 
 var boo=makeMeasurable(boo);
 
@@ -27,11 +27,13 @@ function boo(dam){
 })
 }
 var e=0;
+/*
 setInterval(function(){
 ad.Test(Buffer.from(buf),{type:'start'},function(err,val){console.log('error: ',err);console.log('val: ',val.toString('base64'));})
 e++;
 	console.log('e: ',e)
 },0)
+*/
 //boo(dam);
 //SYNC:
 //1.340ms=n1 2.787ms=n5 2.947ms=n5=base64  27,5ms=n50 without param hardcoded to "mama";

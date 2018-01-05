@@ -25,7 +25,7 @@
 	char* _output;
 	size_t  _bufferlength;
 	size_t _out_bufsize;
-	
+
 	napi_ref _callback;
 	napi_async_work _request;
 }carrier;
@@ -75,8 +75,10 @@ p->mem=mn;
 	}
 	memcpy(p->buf + p->size,data,length);
 	p->size+=length;
+	//memcpy(fl->fuck,data,length);
 	//fprintf(stderr,"p->buf: %s\n",p->buf);
 	//fprintf(stderr,"p->size: %zu\n",p->size);
+	
 }
 #if HAVE_PNG
 static void fillRow(unsigned char *row, int num, const unsigned char color[])
@@ -89,7 +91,7 @@ static void fillRow(unsigned char *row, int num, const unsigned char color[])
 	}
 }
 #endif
-struct mem_encode writePNG(const QRcode *qrcode, const char *outfile, enum imageType type)
+struct mem_encode  writePNG(const QRcode *qrcode, const char *outfile, enum imageType type)
 {
 	//printf("OUTFILE: %s\n",outfile);
 #if HAVE_PNG
@@ -261,12 +263,14 @@ struct mem_encode writePNG(const QRcode *qrcode, const char *outfile, enum image
 	}
 
 	png_write_end(png_ptr, info_ptr);
+	
 	png_destroy_write_struct(&png_ptr, &info_ptr);
 	fclose(fp);
 	free(row);
 	free(palette);
 	abba=1;
 return state;
+	/
 
 #else
 	fputs("\n\nPNG output is disabled at compile time. No output generated.\n", stderr);
@@ -276,17 +280,19 @@ return state;
 static QRcode *encode(const unsigned char *intext, int length)
 {
 	eightbit=1;
+	printf("intext: %s\n",intext);
 	QRcode *code;
 
 	if(micro) {
 		printf("MICRO?\n");
 		if(eightbit) {
+			
 			code = QRcode_encodeDataMQR(length, intext, version, level);
 		} else {
 			code = QRcode_encodeStringMQR((char *)intext, version, level, hint, casesensitive);
 		}
 	} else if(eightbit) {
-		printf("EIGHTBIT? 1016\n");
+		printf("EIGHTBIT\n");
 		code = QRcode_encodeData(length, intext, version, level);
 	} else {
 		printf("ENCODESTRING???\n");
@@ -343,6 +349,7 @@ void Execute(napi_env env,void* data){
 	}
 	
 	struct mem_encode p;
+	//carrier fl;
 	QRcode *qrcode;
 //printf("INTEXT: %s\n",c->_input);
 	qrcode = encode(c->_input, c->_bufferlength);
@@ -362,15 +369,17 @@ void Execute(napi_env env,void* data){
 		case PNG_TYPE:
 		case PNG32_TYPE:
 			p=writePNG(qrcode,"-", image_type);
+	
 			break;
 		default:
 			fprintf(stderr, "Unknown image type.\n");
 			exit(EXIT_FAILURE);
 	}
+	//fprintf(stderr,"d: %s\n",fl.fuck);
 	
 	c->_output=(char*)malloc(sizeof(c->_output)*p.size);
 	if(c->_output==NULL){fprintf(stderr,"some malloc error\n");}
-	//c->_output[1000];
+	
      memcpy(c->_output,p.buf,p.size);
 	c->_out_bufsize=p.size;
 	free(c->_output);
@@ -381,8 +390,8 @@ void Execute(napi_env env,void* data){
 		free(p.buf);
 		p.buf=NULL;
 		p.size=0;
-		//free(c->_output);
-		//c->_out_bufsize=0;
+		
+	
 	fprintf(stderr,"\nLABUDA IS 1!!!\n");
 		labuda=0;
 	}else{fprintf(stderr,"\nLABUDA IS 0\n");}

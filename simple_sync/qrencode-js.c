@@ -33,27 +33,40 @@ enum imageType {
 	PNG32_TYPE
 };
 struct mem_encode{
-char* buf;
+ char* buf;
 size_t size;
 size_t mem;
-};
-static const int mn=41;
-static enum imageType image_type = PNG_TYPE;
 
+};
+//static 
+const int mn=41;//512;
+static enum imageType image_type = PNG_TYPE;
+//struct mem_encode pi;
+/*void mfu(png_flush_ptr d){
+	//fprintf(stderr,"FUCK!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! zu\n");
+			
+			//return png_ptr
+}*/
+int ct=0;
 static void my_png_write_data(png_structp png_ptr,png_bytep data,png_size_t length){
-	
+	ct++;
 struct mem_encode* p=(struct mem_encode*) png_get_io_ptr(png_ptr);
+	//p->buf[1024];
 if(!p->buf){
-p->buf=(char*)malloc(sizeof(p->buf)*mn);
+p->buf=(char*)malloc(sizeof*p->buf*mn);
 if(!p->buf){png_error(png_ptr,"malloc png error");}
 p->mem=mn;
 }
 	if(p->size +length > p->mem){
+		//fprintf(stderr,"USING REALLOC\n");
 	char *new_png=(char*)realloc(p->buf,sizeof(char)*p->size + length);
 		if(!new_png) png_error(png_ptr,"realloc png error");
 		p->buf=new_png;
 		p->mem+=length;
 	}
+	//fprintf(stderr,"data length:  %zu\n",length);
+	//fprintf(stderr,"p->buf p->size: %zu\n",p->size);
+	//fprintf(stderr,"ct: %d\n",ct);
 	memcpy(p->buf + p->size,data,length);
 	p->size+=length;
 }
@@ -71,11 +84,13 @@ static void fillRow(unsigned char *row, int num, const unsigned char color[])
 #endif
 
 /*static int*/
+int suka=0;
 struct mem_encode writePNG(const QRcode *qrcode, const char *outfile, enum imageType type)
 {
-	printf("OUTFILE: %s\n",outfile);
+	//printf("OUTFILE: %s\n",outfile);
 #if HAVE_PNG
 	struct mem_encode state;
+	
 	state.buf=NULL;
 	state.size=0;
 	state.mem=0;
@@ -153,7 +168,7 @@ struct mem_encode writePNG(const QRcode *qrcode, const char *outfile, enum image
 	//png_init_io(png_ptr, fp);
 	png_set_write_fn(png_ptr,&state, my_png_write_data, NULL);
 	if(type == PNG_TYPE) {
-		printf("PNG-tyPe 55\n");
+		//printf("PNG-tyPe 55\n");
 		png_set_IHDR(png_ptr, info_ptr,
 				(unsigned int)realwidth, (unsigned int)realwidth,
 				1,
@@ -248,6 +263,9 @@ struct mem_encode writePNG(const QRcode *qrcode, const char *outfile, enum image
 	//if(state.buf) free(state.buf);
 	free(row);
 	free(palette);
+	//free(state.buf);
+	//fprintf(stderr,"buffer: %s - %zu\n",state.buf,state.size);
+	suka=1;
 return state;
 	//return 0;
 #else
@@ -262,27 +280,28 @@ static QRcode *encode(const unsigned char *intext, int length)
 	QRcode *code;
 
 	if(micro) {
-		printf("MICRO?\n");
+		//printf("MICRO?\n");
 		if(eightbit) {
 			code = QRcode_encodeDataMQR(length, intext, version, level);
 		} else {
 			code = QRcode_encodeStringMQR((char *)intext, version, level, hint, casesensitive);
 		}
 	} else if(eightbit) {
-		printf("EIGHTBIT? 1016\n");
+		//printf("EIGHTBIT? 1016\n");
 		code = QRcode_encodeData(length, intext, version, level);
 	} else {
-		printf("ENCODESTRING???\n");
+		//printf("ENCODESTRING???\n");
 		code = QRcode_encodeString((char *)intext, version, level, hint, casesensitive);
 	}
 
 	return code;
 }
 
-static void qrencode(const unsigned char *intext, int length, const char *outfile)
+//static void 
+static struct mem_encode qrencode(const unsigned char *intext, int length, const char *outfile)
 {
 	QRcode *qrcode;
-printf("INTEXT: %s\n",intext);
+//fprintf(stderr,"INTEXT: %s\n",(char*)intext);
 	qrcode = encode(intext, length);
 	if(qrcode == NULL) {
 		if(errno == ERANGE) {
@@ -293,44 +312,102 @@ printf("INTEXT: %s\n",intext);
 		exit(EXIT_FAILURE);
 	}
 
-	struct mem_encode p;
+	struct mem_encode state;
 
-	printf("image_type: %d%d\n",image_type,qrcode->version);
+	//fprintf(stderr,"KIRKOROV image_type: %d %d\n",image_type,qrcode->version);
 
 	switch(image_type) {
 		case PNG_TYPE:
 		case PNG32_TYPE:
-			p=writePNG(qrcode, outfile, image_type);
+			state=writePNG(qrcode, outfile, image_type);
+			//fprintf(stderr,"zu %zu\n",p.size);
+			//fprintf(stderr,"Buffer_2: %s\n",p.buf);
+			//fprintf(stderr,"Suka: %d\n",suka);
+			//sleep(1);
+			//p.mem=0;
+			//free(p->buf);
+			//if(p.buf){free(p.buf);
+					 // p.buf=NULL;
+					//  fprintf(stderr,"buffer freed.\n");}else{fprintf(stderr,"buffer is not freed.\n");}
+			//fprintf(stderr,"Buffer_3: %s\n",p.buf);
+			//p.buf=NULL;
+			//p.size=0;
+			//p.mem=0;
+			//fprintf(stderr,"zu aft %zu\n",p.size);
 			break;
 		default:
 			fprintf(stderr, "Unknown image type.\n");
 			exit(EXIT_FAILURE);
 	}
-
-if(p.buf){free(p.buf);fprintf(stderr,"\np.buf is freed.\n");}else{fprintf(stderr,"p.buf is undefined.\n");}
+/*
+if(p.buf){free(p.buf);
+		  //p.buf=NULL;
+		  p.mem=0;p.size=0;
+		  fprintf(stderr,"\np.buf is freed.\n");}else{fprintf(stderr,"p.buf is undefined.\n");}*/
+	//printf("BEFORE QRCODE FREE\n");
+	//free(state.buf);
 	QRcode_free(qrcode);
+	//if(p.buf)
+		//free(p.buf);p.buf[p.size]='0';
+	//=NULL;
+	//p.mem=0;p.size=0;
+	//fprintf(stderr,"bufer before free: %s\n",p.buf);
+	//free(state.buf);
+	//state.buf=NULL;
+	//p.mem=0;p.size=0;
+	//fprintf(stderr,"suka after free: %d\n",suka);
+	//fprintf(stderr,"bufer after free - and size -and mem: %s - %zu -%zu\n",p.buf,p.size,p.mem);
+	return state;
 }
 
-
+/*
+�PNG
+
+IHDRWWKK/PLTE����ٟ�tRNS��ȵ��	pHYs
+                                            
+                                             ��~��IDAT8��ӱ�0
+                                                               П���|�5�e%�
+                                                                          0�;��]0�.��
+#���+|��e��pB2�U<36�UG�u��e��{wg���P���O�-kNG&E�Q�F5�����qS�s�C����+sB�vQ͜��U��`34K�2���yi�/
+�X�����qj�7S4S���X�Z����X���Z�_���T���QIEND�B`�
+*/
+//struct mem_encode state;
+//void du(){struct mem_encode p;free(p.buf);}
 napi_value qrencodeBuffer(napi_env env,napi_callback_info info){
+	struct mem_encode state;
+	//napi_handle_scope scope;
 napi_value theBuffer;
 napi_status status;
 size_t argc=1;
 	napi_value args[1];
+	//napi_open_handle_scope(env,&scope);
 	status=napi_get_cb_info(env,info,&argc,args,NULL,NULL);
 	assert(status==napi_ok);
 	napi_value myBuffer=args[0];
 	
-struct mem_encode state;
+
 	const unsigned char*bufferdata;
 	size_t bufferlength;
 	status=napi_get_buffer_info(env,myBuffer,(void**)(&bufferdata),&bufferlength);
 	assert(status==napi_ok);
 	//qrencode((const unsigned char*)"mama",4,"-");
-	printf("input buffer length %zu \n",bufferlength);
-	qrencode(bufferdata,bufferlength,"-");
+	//printf("input buffer length %zu \n",bufferlength);
+	state=qrencode(bufferdata,bufferlength,"-");
+	//printf("some data %s %zu\n",state.buf,state.size);
+	//fprintf(stderr,"Suka la: %zu\n",state.size);
 	status=napi_create_buffer_copy(env,state.size,state.buf,NULL,&theBuffer);
+	
 	assert(status==napi_ok);
+	suka=2;
+	//fprintf(stderr,"suka after: %d\n",suka);
+	
+	//pf(state);
+	//napi_close_handle_scope(env,scope);
+	//fprintf(stderr,"size: %zu - %zu\n",state.size,state.mem);
+	free(state.buf);
+	state.buf=NULL;
+	state.mem=0;state.size=0;
+	//fprintf(stderr,"buffer: %s = %zu = %zu\n",state.buf,state.mem,state.size);
 	return theBuffer;
 }
 napi_value Init(napi_env env,napi_value exports){
