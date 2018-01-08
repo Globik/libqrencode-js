@@ -1,37 +1,25 @@
-#include <assert.h>
-
-#if HAVE_CONFIG_H
-# include "config.h"
-#endif
+/*
+*   An example of an asynchronous C++ node addon.
+*   Provided by paulhauner https://github.com/paulhauner
+*   License: MIT
+*   Tested in node.js v4.4.2 LTS in Ubuntu Linux
+*/
+#include <node.h>
+#include <uv.h>
+#include <iostream>
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <node_buffer.h>
+//#include "simpli.h"
+#define MAX_CANCEL_THREADS 6
+//define nullptr ((void*)0)
 #if HAVE_PNG
 #include <png.h>
 #endif
-#include <node_api.h>
 #include "qrencode.h"
-#if defined _WIN32
-#include <windows.h>
-#else
-#include <unistd.h>
-#endif
-#define MAX_CANCEL_THREADS 6
-#define nullptr ((void*)0)
-
- typedef struct{
-	const unsigned char* _input;
-	char* _output;
-	size_t  _bufferlength;
-	size_t _out_bufsize;
-
-	napi_ref _callback;
-	napi_async_work _request;
-}carrier;
-carrier the_carrier;
-carrier async_carrier[MAX_CANCEL_THREADS];
-
 #define INCHES_PER_METER (100.0/2.54)
 
 static int casesensitive = 1;
@@ -46,19 +34,27 @@ static QRencodeMode hint = QR_MODE_8;
 static unsigned char fg_color[4] = {0, 0, 0, 255};
 static unsigned char bg_color[4] = {255, 255, 255, 255};
 
+typedef struct{
+const unsigned char* _input;
+char* _output;
+size_t  _bufferlength;
+size_t _out_bufsize;
+}carrier;
 enum imageType {
 	PNG_TYPE,
 	PNG32_TYPE
 };
+
+static enum imageType image_type = PNG_TYPE;
+using namespace std;
+//struct mem_encode p;
+
 struct mem_encode{
 char* buf;
 size_t size;
 size_t mem;
 };
-//static 
-int abba=0;
-	const int mn=41;
-static enum imageType image_type = PNG_TYPE;
+const int mn=41;int abba=0;
 static void my_png_write_data(png_structp png_ptr,png_bytep data,png_size_t length){
 struct mem_encode* p=(struct mem_encode*) png_get_io_ptr(png_ptr);
 
@@ -171,7 +167,6 @@ struct mem_encode  writePNG(const QRcode *qrcode, const char *outfile, enum imag
 		png_set_PLTE(png_ptr, info_ptr, palette, 2);
 		png_set_tRNS(png_ptr, info_ptr, alpha_values, 2, NULL);
 	}
-
 	//png_init_io(png_ptr, fp);
 	png_set_write_fn(png_ptr,&state, my_png_write_data, NULL);
 	if(type == PNG_TYPE) {
@@ -269,8 +264,10 @@ struct mem_encode  writePNG(const QRcode *qrcode, const char *outfile, enum imag
 	free(row);
 	free(palette);
 	abba=1;
+	fprintf(stderr,"STATE.SIZE %zu\n",state.size);
+	fprintf(stderr,"STATE.BUF: %s\n",state.buf);
 return state;
-	/
+	
 
 #else
 	fputs("\n\nPNG output is disabled at compile time. No output generated.\n", stderr);
@@ -278,7 +275,7 @@ return state;
 #endif
 }
 static QRcode *encode(const unsigned char *intext, int length)
-{
+		{
 	eightbit=1;
 	printf("intext: %s\n",intext);
 	QRcode *code;
@@ -301,11 +298,10 @@ static QRcode *encode(const unsigned char *intext, int length)
 
 	return code;
 }
-/*
-static void qrencode(const unsigned char *intext, int length, const char *outfile)
+static struct mem_encode qrencode(const unsigned char *intext, int length, const char *outfile)
 {
 	QRcode *qrcode;
-printf("INTEXT: %s\n",intext);
+//fprintf(stderr,"INTEXT: %s\n",(char*)intext);
 	qrcode = encode(intext, length);
 	if(qrcode == NULL) {
 		if(errno == ERANGE) {
@@ -316,74 +312,102 @@ printf("INTEXT: %s\n",intext);
 		exit(EXIT_FAILURE);
 	}
 
-	struct mem_encode p;
+	struct mem_encode state;
 
-	printf("image_type: %d%d\n",image_type,qrcode->version);
+	//fprintf(stderr,"KIRKOROV image_type: %d %d\n",image_type,qrcode->version);
 
 	switch(image_type) {
 		case PNG_TYPE:
 		case PNG32_TYPE:
-			p=writePNG(qrcode, outfile, image_type);
+			state=writePNG(qrcode, outfile, image_type);
+			//state=writePNG(qrcode, outfile, image_type);
+			//fprintf(stderr,"zu %zu\n",p.size);
+			//fprintf(stderr,"Buffer_2: %s\n",p.buf);
+			//fprintf(stderr,"Suka: %d\n",suka);
+			//sleep(1);
+			//p.mem=0;
+			//free(p->buf);
+			//if(p.buf){free(p.buf);
+					 // p.buf=NULL;
+					//  fprintf(stderr,"buffer freed.\n");}else{fprintf(stderr,"buffer is not freed.\n");}
+			//fprintf(stderr,"Buffer_3: %s\n",p.buf);
+			//p.buf=NULL;
+			//p.size=
+			//p.mem=0;
+			//fprintf(stderr,"zu aft %zu\n",p.size);
 			break;
 		default:
 			fprintf(stderr, "Unknown image type.\n");
 			exit(EXIT_FAILURE);
 	}
-	
-	
-fprintf(stderr,"Some data: %s\n",p.buf);
-	fprintf(stderr,"p.size: %zu\n",p.size);
-if(p.buf){free(p.buf);fprintf(stderr,"\np.buf is freed.\n");}else{fprintf(stderr,"p.buf is undefined.\n");}
+/*
+if(p.buf){free(p.buf);
+		  //p.buf=NULL;
+		  p.mem=0;p.size=0;
+		  fprintf(stderr,"\np.buf is freed.\n");}else{fprintf(stderr,"p.buf is undefined.\n");}*/
+	//printf("BEFORE QRCODE FREE\n");
+	//free(state.buf);
 	QRcode_free(qrcode);
+	//if(p.buf)
+		//free(p.buf);p.buf[p.size]='0';
+	//=NULL;
+	//p.mem=0;p.size=0;
+	//fprintf(stderr,"bufer before free: %s\n",p.buf);
+	//free(state.buf);
+	//state.buf=NULL;
+	//p.mem=0;p.size=0;
+	//fprintf(stderr,"suka after free: %d\n",suka);
+	//fprintf(stderr,"bufer after free - and size -and mem: %s - %zu -%zu\n",p.buf,p.size,p.mem);
+	return state;
 }
 
-*/
-int labuda=0;
-void Execute(napi_env env,void* data){
+namespace asyncAddon {
+  using v8::Function;
+  using v8::FunctionCallbackInfo;
+  using v8::Isolate;
+  using v8::Local;
+  using v8::Object;
+  using v8::String;
+  using v8::Value;
+  using v8::Persistent;
 
- carrier* c=(carrier*)data;
-	if(c==NULL){fprintf(stderr,"NULL!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");}
-	if(c !=&the_carrier){
-	napi_throw_type_error(env,nullptr,"wrong data parameter to Execute");
-		return;
-	}
+  /**
+  * Work structure is be used to pass the callback function and data 
+  * from the initiating function to the function which triggers the callback.
+  */
+  struct Work {
+    uv_work_t  request;
+    Persistent<Function> callback;
+    string result;
+	  char * result2;
+	  size_t len;
+  };
+  
+  /**
+  * WorkAsync function is the "middle" function which does the work.
+  * After the WorkAsync function is called, the WorkAsyncComplete function
+  * is called.
+  */
+	int labuda=1;
+  static void WorkAsync(uv_work_t *req) {
+	  printf("LABUDAAAAAAAAAAAAAAAAAAAAAAAAA\n");
+    Work *work = static_cast<Work *>(req->data);
+	 // work->result = "Async task processed.";
+	 // qrencode(const unsigned char *intext, int length, const char *outfile)
+	   printf("2 LABUDAAAAAAAAAAAAAAAAAAAAAAAAA\n");
+    //carrier *c=NULL;
+    //sleep(3);
+    //work->result = "Async task processed.";
+	 struct mem_encode state=qrencode((const unsigned char*)"mama",4,"-");
+	//c->_output=(char*)malloc(sizeof(c->_output)*p.size);
+	//if(c->_output==NULL){fprintf(stderr,"some malloc error\n");}
 	
-	struct mem_encode p;
-	//carrier fl;
-	QRcode *qrcode;
-//printf("INTEXT: %s\n",c->_input);
-	qrcode = encode(c->_input, c->_bufferlength);
-	if(qrcode == NULL) {
-		if(errno == ERANGE) {
-			fprintf(stderr, "Failed to encode the input data: Input data too large\n");
-		} else {
-			perror("Failed to encode the input data");
-		}
-		exit(EXIT_FAILURE);
-	}
-
-
-
-
-	switch(image_type) {
-		case PNG_TYPE:
-		case PNG32_TYPE:
-			p=writePNG(qrcode,"-", image_type);
-	
-			break;
-		default:
-			fprintf(stderr, "Unknown image type.\n");
-			exit(EXIT_FAILURE);
-	}
-	
-	c->_output=(char*)malloc(sizeof(c->_output)*p.size);
-	if(c->_output==NULL){fprintf(stderr,"some malloc error\n");}
-	
-     memcpy(c->_output,p.buf,p.size);
-	c->_out_bufsize=p.size;
-	free(c->_output);
+    // memcpy(c->_output,p.buf,p.size);
+	//c->_out_bufsize=p.size;
+	 // fprintf(stderr,"buffer is here: %s -%zu\n",c->_output,c->_out_bufsize);
+	//free(c->_output);
 	labuda=1;
-	
+	/*
 	if(labuda==1){
 		fprintf(stderr,"length: %zu\n",p.size);
 		free(p.buf);
@@ -394,114 +418,72 @@ void Execute(napi_env env,void* data){
 	fprintf(stderr,"\nLABUDA IS 1!!!\n");
 		labuda=0;
 	}else{fprintf(stderr,"\nLABUDA IS 0\n");}
-
-	QRcode_free(qrcode);
-}
-
-void Complete(napi_env env,napi_status status, void* data){
- carrier* c=(carrier*)data;
+*/
+	   fprintf(stderr,"5555 LABUDAAAAAAAAAAAAAAAAAAAAAAAAA %s size: %zu\n",state.buf,state.size);
+	  work->result2=(char*)malloc(sizeof(work->result2)*state.size);
+	if(work->result2==NULL){fprintf(stderr,"some malloc error\n");}
 	
-	if(c !=&the_carrier){
-	napi_throw_type_error(env,nullptr,"wrong data parameter to Complete");
-		return;
-	}
-	
-	if(status !=napi_ok){
-	napi_throw_type_error(env,nullptr,"execute callback failed.");
-		return;
-	}
-napi_handle_scope scope;
-	napi_value argv[2];
-	status=napi_open_handle_scope(env,&scope);
-	assert(status==napi_ok);
-	napi_get_null(env,&argv[0]);
-	fprintf(stderr,"\nDATA!!!!: %zu\n",c->_out_bufsize);
-status=napi_create_buffer_copy(env,c->_out_bufsize,c->_output,NULL,&argv[1]);	
-	assert(status==napi_ok);
-	//if(c->_output){free(c->_output);}
-	napi_value callback;
-	napi_get_reference_value(env,c->_callback,&callback);
-	napi_value global;
-	status=napi_get_global(env,&global);
-	assert(status==napi_ok);
-	napi_value result;
-	fprintf(stderr,"Labuda vor napi_call_func: %d\n",labuda);
-	status=napi_call_function(env,global,callback,2,argv,&result);
-	assert(status==napi_ok);
-	fprintf(stderr,"Labuda vor del_ref: %d\n",labuda);
-	//status=napi_delete_reference(env,c->_callback);
-	//assert(status==napi_ok);
-	//status=napi_delete_async_work(env,c->_request);
-	//assert(status==napi_ok);
-	status=napi_close_handle_scope(env,scope);
-	assert(status==napi_ok);
-}
+     memcpy(work->result2,state.buf,state.size);
+	//c->_out_bufsize=p.size;
+	//free(c->_output);
+	 // work->result2 = state.buf;//"Async task processed.";
+	  work->len=state.size;
+	free(state.buf);state.mem=0;state.size=0;
+	  free(work->result2);
+	 // work->result = "Async task processed.";
+  }
+  
+  /**
+  * WorkAsyncComplete function is called once we are ready to trigger the callback
+  * function in JS.
+  */
+  static void WorkAsyncComplete(uv_work_t *req,int status)
+  {
+    Isolate * isolate = Isolate::GetCurrent();
 
-napi_value Test(napi_env env,napi_callback_info info){
-size_t argc=3;
-	napi_status status;
-	napi_value argv[3];
-	napi_value _this;
-	napi_value resource_name;
-	void* data;
-	napi_handle_scope scope;
-	status=napi_open_handle_scope(env,&scope);
-	assert(status==napi_ok);
-	status=napi_get_cb_info(env,info,&argc,argv,&_this,&data);
-	assert(status==napi_ok);
-	//if(argc >3){napi_throw_type_error(env,nullptr,"not enough arguments, expected 3?.");
-	//			return nullptr;
-	//			}
-	//napi_valuetype t;
-	//status=napi_typeof(env,argv[0],&t);
-	//assert(status==napi_ok);
-	//if(t !=napi_object){
-	//napi_throw_type_error(env,nullptr,"Wrong first argument, obj or buf expected.");return nullptr;
-	//}
-	//status=napi_is_buffer(env,argv[0],&hasIstance)
-	//assert(status==napi_ok);
-	
-	/*
-	status=napi_typeof(env,argv[1],&t);
-	assert(status==napi_ok);
-	if(t !=napi_object){
-	napi_throw_type_error(env,nullptr, "wrong second argument, object expected.");
-		return nullptr;
-	}
-		status=napi_typeof(env,argv[2],&t);
-	assert(status==napi_ok);
-	if(t !=napi_function){
-		napi_throw_type_error(env,nullptr,"wrong third argument, function expected.");
-		return nullptr;
-	}	
-	*/
-	//the_carrier._output=NULL;
-	//status=napi_get_value_int32(env,argv[0],&the_carrier._input);
+    v8::HandleScope handleScope(isolate);
 
-	status=napi_get_buffer_info(env, argv[0],(void**)(&the_carrier._input),&the_carrier._bufferlength);
-	assert(status==napi_ok);
-	
-	
-	status=napi_create_reference(env,argv[2],1,&the_carrier._callback);
-	assert(status==napi_ok);
-	status=napi_create_string_utf8(env,"TestResource",NAPI_AUTO_LENGTH,&resource_name);
-	assert(status==napi_ok);
-	status=napi_create_async_work(env,argv[1],resource_name,Execute,Complete,&the_carrier,&the_carrier._request);
-	assert(status==napi_ok);
-	status=napi_queue_async_work(env,the_carrier._request);
-	assert(status==napi_ok);
-	napi_close_handle_scope(env,scope);
-	return nullptr;
-	}
+    Work *work = static_cast<Work *>(req->data);
+    
+   // const char *result =(char*) work->result;//.c_str();
+   // Local<Value> argv[1] = { String::NewFromUtf8(isolate, result) };
+    Local<Value> argv[1]={node::Buffer::New(isolate,(char*)work->result2,work->len,nullptr,nullptr).ToLocalChecked()};
+    // https://stackoverflow.com/questions/13826803/calling-javascript-function-from-a-c-callback-in-v8/28554065#28554065
+    Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+    
+    work->callback.Reset();
+    delete work;
+  }
+  
+  /**
+  * DoTaskAsync is the initial function called from JS. This function returns
+  * immediately, however starts a uv task which later calls the callback function
+  */
+  void DoTaskAsync(const FunctionCallbackInfo<Value>& args) {
+    Isolate* isolate = args.GetIsolate();
+    
+    
+    Work * work = new Work();
+    work->request.data = work;
+    
+    // args[0] is where we pick the callback function out of the JS function params.
+    // Because we chose args[0], we must supply the callback fn as the first parameter
+    Local<Function> callback = Local<Function>::Cast(args[0]);
+    work->callback.Reset(isolate, callback);
+    
+    uv_queue_work(uv_default_loop(), &work->request, WorkAsync, WorkAsyncComplete);
+    
+    args.GetReturnValue().Set(Undefined(isolate));  
+  }
+  
+  
+  /**
+  * init function declares what we will make visible to node
+  */
+  void init(Local<Object> exports) {
+    NODE_SET_METHOD(exports, "doTask", DoTaskAsync);
+  }
 
+  NODE_MODULE(asyncAddon, init)
 
-napi_value Init(napi_env env,napi_value exports){
-	napi_status status;
-napi_property_descriptor properties[]={
-	{"Test",0,Test,0,0,0,napi_default,0}
-};
-status=napi_define_properties(env,exports,sizeof(properties)/sizeof(*properties),properties);
-assert(status==napi_ok);
-return exports;
-}
-NAPI_MODULE(addon,Init)
+}  

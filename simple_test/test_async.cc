@@ -18,12 +18,15 @@ console.log(val);// 10
 
 #include <node_api.h>
 #include "common.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 #if defined _WIN32
 #include <windows.h>
 #else
 #include <unistd.h>
 #endif
-#define nullptr ((void*)0)
+
 typedef struct{
 int32_t _input;
 int32_t _output;
@@ -42,6 +45,8 @@ carrier* c=(carrier*)data;
 	#endif
 	c->_output=c->_input*2;
 }
+//muka
+//fig
 void Complete(napi_env env,napi_status status, void* data){
     carrier* c=(carrier*)data;
 	
@@ -56,7 +61,8 @@ void Complete(napi_env env,napi_status status, void* data){
 	}
     napi_handle_scope scope;
 	napi_value argv[2];
-	napi_open_handle_scope(env,&scope);
+	//napi_open_handle_scope(env,&scope);
+	printf("satus: %s\n",(char*)status);
 	NAPI_CALL_RETURN_VOID(env,napi_get_null(env,&argv[0]));
 	
 
@@ -66,16 +72,18 @@ void Complete(napi_env env,napi_status status, void* data){
 	NAPI_CALL_RETURN_VOID(env, napi_get_reference_value(env,c->_callback,&callback));
 	napi_value global;
 	NAPI_CALL_RETURN_VOID(env, napi_get_global(env,&global));
+	//NAPI_CALL_RETURN_VOID(env, napi_delete_reference(env,c->_callback));
 	napi_value result;
 	NAPI_CALL_RETURN_VOID(env, napi_call_function(env,global,callback,2,argv,&result));
-	napi_close_handle_scope(env,scope);
-	//NAPI_CALL_RETURN_VOID(env, napi_delete_reference(env,c->_callback));
-	//NAPI_CALL_RETURN_VOID(env, napi_delete_async_work(env,c->_request));
-	
+	//napi_close_handle_scope(env,scope);
+	NAPI_CALL_RETURN_VOID(env, napi_delete_reference(env,c->_callback));
+	NAPI_CALL_RETURN_VOID(env, napi_delete_async_work(env,c->_request));
+	//napi_close_handle_scope(env,scope);
+	//return;
 }
 
 napi_value Test(napi_env env,napi_callback_info info){
-	//napi_handle_scope scope;
+	napi_handle_scope scope;
 size_t argc=3;
 	
 	napi_value argv[3];
@@ -100,6 +108,10 @@ size_t argc=3;
 	NAPI_CALL(env, napi_create_async_work(env,argv[1],resource_name,Execute,Complete,&the_carrier,&the_carrier._request));
 	
 	NAPI_CALL(env, napi_queue_async_work(env,the_carrier._request));
+	
+	//NAPI_CALL(env, napi_create_async_work(env,argv[1],resource_name,Execute,Complete,&the_carrier,&the_carrier._request));
+	
+	//NAPI_CALL(env, napi_queue_async_work(env,the_carrier._request));
 	
 	
 	//napi_close_handle_scope(env,scope);
