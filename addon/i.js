@@ -11,3 +11,9 @@ addon.doTask(function(data) {console.log('data2: ',data.toString());});
 //addon.doTask(function(data) {console.log('data3: ',data);});
 //addon.doTask(function(data) {console.log('data4: ',data);});
 console.log('Async task started.')
+var i=0;
+setInterval(function(){
+setImmediate(function(){
+i++;addon.doTask(function(data) {console.log('data2: ',data.toString());console.log('i',i)});console.log('i: ',i);
+});
+},1000)

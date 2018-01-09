@@ -26,7 +26,7 @@ let a=ad.qrencodeBuffer(buf);//.toString();
 	console.log(a.toString('base64').substring(0,30));
 }
 }
-//setInterval(function(){console.log(ad.qrencodeBuffer(buf).toString('base64').substring(0,16));},0);
+setInterval(function(){console.log(ad.qrencodeBuffer(buf).toString('base64').substring(0,16));},0);
 //1.814ms=n1 2.787ms=n5 5.387ms=n5=base64  44,5ms=n50 without param hardcoded to "mama";
 // another module qr-node.js boo=n1: 21.223ms boo=n5: 24.156ms much slower 20x?? through process.child.on_data 
 // qrcode-js.js:

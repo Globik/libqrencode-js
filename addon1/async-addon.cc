@@ -370,16 +370,21 @@ namespace asyncAddon {
   using v8::String;
   using v8::Value;
   using v8::Persistent;
+using v8::Null;
+	using v8::Integer;
+	using v8::TryCatch;
 
   /**
   * Work structure is be used to pass the callback function and data 
   * from the initiating function to the function which triggers the callback.
   */
-  struct Work {
-    uv_work_t  request;
+  struct async_req{
+    uv_work_t  req;
     Persistent<Function> callback;
-    string result;
-	  char * result2;
+	  Isolate* isolate;
+	  
+int input;    
+	char* result2;
 	  size_t len;
   };
   
@@ -388,100 +393,97 @@ namespace asyncAddon {
   * After the WorkAsync function is called, the WorkAsyncComplete function
   * is called.
   */
-	int labuda=1;
-  static void WorkAsync(uv_work_t *req) {
-	  printf("LABUDAAAAAAAAAAAAAAAAAAAAAAAAA\n");
-    Work *work = static_cast<Work *>(req->data);
-	 // work->result = "Async task processed.";
-	 // qrencode(const unsigned char *intext, int length, const char *outfile)
-	   printf("2 LABUDAAAAAAAAAAAAAAAAAAAAAAAAA\n");
-    //carrier *c=NULL;
-    //sleep(3);
-    //work->result = "Async task processed.";
+	//int labuda=1;
+  static void WorkAsync(uv_work_t *r) {
+	 // printf("LABUDAAAAAAAAAAAAAAAAAAAAAAAAA\n");
+    async_req *req = reinterpret_cast<async_req *>(r->data);
+	  // qrencode(const unsigned char *intext, int length, const char *outfile)
 	 struct mem_encode state=qrencode((const unsigned char*)"mama",4,"-");
-	//c->_output=(char*)malloc(sizeof(c->_output)*p.size);
-	//if(c->_output==NULL){fprintf(stderr,"some malloc error\n");}
+	 req->result2=(char*)malloc(sizeof(req->result2)*state.size);
+	if(req->result2==NULL){fprintf(stderr,"some malloc error\n");}
 	
-    // memcpy(c->_output,p.buf,p.size);
-	//c->_out_bufsize=p.size;
-	 // fprintf(stderr,"buffer is here: %s -%zu\n",c->_output,c->_out_bufsize);
-	//free(c->_output);
-	labuda=1;
-	/*
-	if(labuda==1){
-		fprintf(stderr,"length: %zu\n",p.size);
-		free(p.buf);
-		p.buf=NULL;
-		p.size=0;
-		
-	
-	fprintf(stderr,"\nLABUDA IS 1!!!\n");
-		labuda=0;
-	}else{fprintf(stderr,"\nLABUDA IS 0\n");}
-*/
-	   fprintf(stderr,"5555 LABUDAAAAAAAAAAAAAAAAAAAAAAAAA %s size: %zu\n",state.buf,state.size);
-	  work->result2=(char*)malloc(sizeof(work->result2)*state.size);
-	if(work->result2==NULL){fprintf(stderr,"some malloc error\n");}
-	
-     memcpy(work->result2,state.buf,state.size);
-	//c->_out_bufsize=p.size;
-	//free(c->_output);
-	 // work->result2 = state.buf;//"Async task processed.";
-	  work->len=state.size;
+     memcpy(req->result2,state.buf,state.size);
+	 // req->output = req->input*2;
+	 // fprintf(stderr,"sdata %s\n",req->result2);
+	 req->len=state.size;
 	free(state.buf);state.mem=0;state.size=0;
-	  free(work->result2);
-	 // work->result = "Async task processed.";
+	//free(req->result2);
   }
   
   /**
   * WorkAsyncComplete function is called once we are ready to trigger the callback
   * function in JS.
   */
-  static void WorkAsyncComplete(uv_work_t *req,int status)
+  //static 
+	template <bool use_makecallback>
+	static  void WorkAsyncComplete(uv_work_t *r)
   {
-    Isolate * isolate = Isolate::GetCurrent();
+	  async_req* req = reinterpret_cast<async_req*>(r->data);
+    Isolate* isolate =req->isolate;// Isolate::GetCurrent();
 
-    v8::HandleScope handleScope(isolate);
+    v8::HandleScope scope(isolate);
+	//Local<Value> argv[2]={Null(isolate),Integer::New(isolate,req->output)};
+	  Local<Value> argv[2]={Null(isolate),node::Buffer::New(isolate,req->result2,req->len/*,nullptr,nullptr*/).ToLocalChecked()};
+	  TryCatch try_catch(isolate);
+	  Local<Object> global=isolate->GetCurrentContext()->Global();
+	  //Local<Function> callback=Local<Function>::New(isolate,req->callback);
+	  
+	// Local<Value> argv[2]={Null(isolate),node::Buffer::New(isolate,(char*)req->result2,req->len,nullptr,nullptr).ToLocalChecked()};
+    // https://stackoverflow.com/questions/13826803/calling-javascript-function-from-a-c-callback-in-v8/28554065#28554065
+    //Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+     Local<Function> callback=Local<Function>::New(isolate,req->callback);
+if(use_makecallback){
+Local<Value> ret=node::MakeCallback(isolate,global,callback,2,argv);
+	assert(!ret.IsEmpty());
 
-    Work *work = static_cast<Work *>(req->data);
-    fprintf(stderr,"status %d\n",status);
+}else{callback->Call(global,2,argv);}
+    
+    
    // const char *result =(char*) work->result;//.c_str();
    // Local<Value> argv[1] = { String::NewFromUtf8(isolate, result) };
-    Local<Value> argv[1]={node::Buffer::New(isolate,(char*)work->result2,work->len,nullptr,nullptr).ToLocalChecked()};
+  //  Local<Value> argv[1]={node::Buffer::New(isolate,(char*)work->result2,work->len,nullptr,nullptr).ToLocalChecked()};
     // https://stackoverflow.com/questions/13826803/calling-javascript-function-from-a-c-callback-in-v8/28554065#28554065
-    Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
+   // Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
     
-    work->callback.Reset();
-    delete work;
+    req->callback.Reset();
+    delete req;
+	  if(try_catch.HasCaught()){node::FatalException(isolate,try_catch);}
   }
   
   /**
   * DoTaskAsync is the initial function called from JS. This function returns
   * immediately, however starts a uv task which later calls the callback function
   */
+	template <bool use_makecallback>
   void DoTaskAsync(const FunctionCallbackInfo<Value>& args) {
     Isolate* isolate = args.GetIsolate();
     
     
-    Work * work = new Work();
-    work->request.data = work;
+    async_req * req = new async_req;
+	
+    req->req.data = req;
+	req->input=args[0]->IntegerValue();
+	//req->output=0;
+	req->result2=nullptr;
+	req->isolate=isolate;
     
     // args[0] is where we pick the callback function out of the JS function params.
     // Because we chose args[0], we must supply the callback fn as the first parameter
-    Local<Function> callback = Local<Function>::Cast(args[0]);
-    work->callback.Reset(isolate, callback);
+    Local<Function> callback = Local<Function>::Cast(args[1]);
+    req->callback.Reset(isolate, callback);
     
-    uv_queue_work(uv_default_loop(), &work->request, WorkAsync, WorkAsyncComplete);
+    uv_queue_work(node::GetCurrentEventLoop(isolate), &req->req, WorkAsync,(uv_after_work_cb) WorkAsyncComplete<use_makecallback>);
     
-    args.GetReturnValue().Set(Undefined(isolate));  
+  // args.GetReturnValue().Set(Undefined(isolate));  
   }
   
   
   /**
   * init function declares what we will make visible to node
   */
-  void init(Local<Object> exports) {
-    NODE_SET_METHOD(exports, "doTask", DoTaskAsync);
+  void init(Local<Object> exports,Local<Object> module) {
+    NODE_SET_METHOD(exports, "runCall", DoTaskAsync<false>);
+	NODE_SET_METHOD(exports,"runMakeCallback",DoTaskAsync<true>);
   }
 
   NODE_MODULE(asyncAddon, init)
