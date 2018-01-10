@@ -19,4 +19,5 @@ const addon = require('./build/Release/asyncAddon');
 addon.runCall(5,function(er,d){console.log(d.toString());})
 addon.runCall(5,function(er,d){console.log(d);})
 var i=0;
-setInterval(()=>{i++;addon.runMakeCallback(5,function(er,d){console.log(er,d);});console.log('i:',i);},1)
+var t=setInterval(()=>{i++;addon.runMakeCallback(5,function(er,d){console.log(er,d);});console.log('i:',i);if(i==202){suka();}},10)
+function suka(){clearInterval(t);}

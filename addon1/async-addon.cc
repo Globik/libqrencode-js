@@ -408,6 +408,7 @@ int input;
 	 req->len=state.size;
 	free(state.buf);state.mem=0;state.size=0;
 	//free(req->result2);
+	  //req->len=0;
   }
   
   /**
@@ -415,6 +416,23 @@ int input;
   * function in JS.
   */
   //static 
+	int bk=0;
+	void buf_del_cb(char*data,void*hint){
+		//async_req * req=(async_req*)hint;
+		bk++;
+		fprintf(stderr,"ku zifra: %d\n",bk);
+		fprintf(stderr,"\n\n***********************************************************************************************************\n\n");
+		//fprintf(stderr,"\n\n***********************************************************************************************************\n\n");
+		//fprintf(stderr,"\n\n***********************************************************************************************************\n\n");
+		//fprintf(stderr,"\n\n***********************************************************************************************************\n\n");
+		//fprintf(stderr,"\n\n***********************************************************************************************************\n\n");
+		//fprintf(stderr,"\n\n***********************************************************************************************************\n\n");
+		fprintf(stderr,"ku2: %s\n",(char*)hint);
+		//printf("fuck\n");
+	free((char*)hint);
+		hint=nullptr;//NULL;
+		fprintf(stderr,"After buf: %s\n",(char*)hint);
+	}
 	template <bool use_makecallback>
 	static  void WorkAsyncComplete(uv_work_t *r)
   {
@@ -423,7 +441,7 @@ int input;
 
     v8::HandleScope scope(isolate);
 	//Local<Value> argv[2]={Null(isolate),Integer::New(isolate,req->output)};
-	  Local<Value> argv[2]={Null(isolate),node::Buffer::New(isolate,req->result2,req->len/*,nullptr,nullptr*/).ToLocalChecked()};
+	  Local<Value> argv[2]={Null(isolate),node::Buffer::New(isolate,req->result2,req->len,buf_del_cb,req->result2).ToLocalChecked()};
 	  TryCatch try_catch(isolate);
 	  Local<Object> global=isolate->GetCurrentContext()->Global();
 	  //Local<Function> callback=Local<Function>::New(isolate,req->callback);
@@ -465,6 +483,7 @@ Local<Value> ret=node::MakeCallback(isolate,global,callback,2,argv);
 	req->input=args[0]->IntegerValue();
 	//req->output=0;
 	req->result2=nullptr;
+	req->len=0;
 	req->isolate=isolate;
     
     // args[0] is where we pick the callback function out of the JS function params.
