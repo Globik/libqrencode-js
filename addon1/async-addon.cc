@@ -13,9 +13,7 @@
 #include <string.h>
 #include <errno.h>
 #include <node_buffer.h>
-//#include "simpli.h"
 #define MAX_CANCEL_THREADS 6
-//define nullptr ((void*)0)
 #if HAVE_PNG
 #include <png.h>
 #endif
@@ -47,7 +45,7 @@ enum imageType {
 
 static enum imageType image_type = PNG_TYPE;
 using namespace std;
-//struct mem_encode p;
+
 
 struct mem_encode{
 char* buf;
@@ -71,11 +69,7 @@ p->mem=mn;
 	}
 	memcpy(p->buf + p->size,data,length);
 	p->size+=length;
-	//memcpy(fl->fuck,data,length);
-	//fprintf(stderr,"p->buf: %s\n",p->buf);
-	//fprintf(stderr,"p->size: %zu\n",p->size);
-	
-}
+	}
 #if HAVE_PNG
 static void fillRow(unsigned char *row, int num, const unsigned char color[])
 {
@@ -264,8 +258,8 @@ struct mem_encode  writePNG(const QRcode *qrcode, const char *outfile, enum imag
 	free(row);
 	free(palette);
 	abba=1;
-	fprintf(stderr,"STATE.SIZE %zu\n",state.size);
-	fprintf(stderr,"STATE.BUF: %s\n",state.buf);
+	//fprintf(stderr,"STATE.SIZE %zu\n",state.size);
+	//fprintf(stderr,"STATE.BUF: %s\n",state.buf);
 return state;
 	
 
@@ -277,19 +271,26 @@ return state;
 static QRcode *encode(const unsigned char *intext, int length)
 		{
 	eightbit=1;
-	printf("intext: %s\n",intext);
+			//micro=1;
+	//fprintf(stderr,"intext: %s\n",(const char*)intext);
 	QRcode *code;
 
 	if(micro) {
 		printf("MICRO?\n");
 		if(eightbit) {
 			
-			code = QRcode_encodeDataMQR(length, intext, version, level);
+			code = QRcode_encodeDataMQR(length, intext, /*version*/4, level);
+			fprintf(stderr,"LEVEL: %zu\n",level);
+			//version 3 or 4
+			//code = QRcode_encodeDataMQR(4, (unsigned char*)"mama\0", 4, QR_ECLEVEL_M);
+			//qrencode -8 -M -v 4 -o - mm
+			//int size,const unsigned char*,int version,qrelevel
 		} else {
-			code = QRcode_encodeStringMQR((char *)intext, version, level, hint, casesensitive);
+		
+			code = QRcode_encodeStringMQR((char *)intext,/* version*/4, level, hint, casesensitive);
 		}
 	} else if(eightbit) {
-		printf("EIGHTBIT\n");
+		//printf("EIGHTBIT\n");
 		code = QRcode_encodeData(length, intext, version, level);
 	} else {
 		printf("ENCODESTRING???\n");
@@ -320,44 +321,12 @@ static struct mem_encode qrencode(const unsigned char *intext, int length, const
 		case PNG_TYPE:
 		case PNG32_TYPE:
 			state=writePNG(qrcode, outfile, image_type);
-			//state=writePNG(qrcode, outfile, image_type);
-			//fprintf(stderr,"zu %zu\n",p.size);
-			//fprintf(stderr,"Buffer_2: %s\n",p.buf);
-			//fprintf(stderr,"Suka: %d\n",suka);
-			//sleep(1);
-			//p.mem=0;
-			//free(p->buf);
-			//if(p.buf){free(p.buf);
-					 // p.buf=NULL;
-					//  fprintf(stderr,"buffer freed.\n");}else{fprintf(stderr,"buffer is not freed.\n");}
-			//fprintf(stderr,"Buffer_3: %s\n",p.buf);
-			//p.buf=NULL;
-			//p.size=
-			//p.mem=0;
-			//fprintf(stderr,"zu aft %zu\n",p.size);
 			break;
 		default:
 			fprintf(stderr, "Unknown image type.\n");
 			exit(EXIT_FAILURE);
 	}
-/*
-if(p.buf){free(p.buf);
-		  //p.buf=NULL;
-		  p.mem=0;p.size=0;
-		  fprintf(stderr,"\np.buf is freed.\n");}else{fprintf(stderr,"p.buf is undefined.\n");}*/
-	//printf("BEFORE QRCODE FREE\n");
-	//free(state.buf);
 	QRcode_free(qrcode);
-	//if(p.buf)
-		//free(p.buf);p.buf[p.size]='0';
-	//=NULL;
-	//p.mem=0;p.size=0;
-	//fprintf(stderr,"bufer before free: %s\n",p.buf);
-	//free(state.buf);
-	//state.buf=NULL;
-	//p.mem=0;p.size=0;
-	//fprintf(stderr,"suka after free: %d\n",suka);
-	//fprintf(stderr,"bufer after free - and size -and mem: %s - %zu -%zu\n",p.buf,p.size,p.mem);
 	return state;
 }
 
@@ -382,7 +351,8 @@ using v8::Null;
     uv_work_t  req;
     Persistent<Function> callback;
 	  Isolate* isolate;
-	  
+	  const unsigned char* vinput;
+	  size_t vlen;
 int input;    
 	char* result2;
 	  size_t len;
@@ -393,45 +363,28 @@ int input;
   * After the WorkAsync function is called, the WorkAsyncComplete function
   * is called.
   */
-	//int labuda=1;
+
   static void WorkAsync(uv_work_t *r) {
-	 // printf("LABUDAAAAAAAAAAAAAAAAAAAAAAAAA\n");
-    async_req *req = reinterpret_cast<async_req *>(r->data);
+	async_req *req = reinterpret_cast<async_req *>(r->data);
 	  // qrencode(const unsigned char *intext, int length, const char *outfile)
-	 struct mem_encode state=qrencode((const unsigned char*)"mama",4,"-");
+	 //struct mem_encode state=qrencode((const unsigned char*)"mama",4,"-");
+	  struct mem_encode state=qrencode(req->vinput,req->vlen,"-");
 	 req->result2=(char*)malloc(sizeof(req->result2)*state.size);
 	if(req->result2==NULL){fprintf(stderr,"some malloc error\n");}
+	memcpy(req->result2,state.buf,state.size);
 	
-     memcpy(req->result2,state.buf,state.size);
-	 // req->output = req->input*2;
-	 // fprintf(stderr,"sdata %s\n",req->result2);
 	 req->len=state.size;
 	free(state.buf);state.mem=0;state.size=0;
-	//free(req->result2);
-	  //req->len=0;
   }
   
   /**
   * WorkAsyncComplete function is called once we are ready to trigger the callback
   * function in JS.
   */
-  //static 
-	int bk=0;
+
 	void buf_del_cb(char*data,void*hint){
-		//async_req * req=(async_req*)hint;
-		bk++;
-		fprintf(stderr,"ku zifra: %d\n",bk);
-		fprintf(stderr,"\n\n***********************************************************************************************************\n\n");
-		//fprintf(stderr,"\n\n***********************************************************************************************************\n\n");
-		//fprintf(stderr,"\n\n***********************************************************************************************************\n\n");
-		//fprintf(stderr,"\n\n***********************************************************************************************************\n\n");
-		//fprintf(stderr,"\n\n***********************************************************************************************************\n\n");
-		//fprintf(stderr,"\n\n***********************************************************************************************************\n\n");
-		fprintf(stderr,"ku2: %s\n",(char*)hint);
-		//printf("fuck\n");
 	free((char*)hint);
 		hint=nullptr;//NULL;
-		fprintf(stderr,"After buf: %s\n",(char*)hint);
 	}
 	template <bool use_makecallback>
 	static  void WorkAsyncComplete(uv_work_t *r)
@@ -444,28 +397,15 @@ int input;
 	  Local<Value> argv[2]={Null(isolate),node::Buffer::New(isolate,req->result2,req->len,buf_del_cb,req->result2).ToLocalChecked()};
 	  TryCatch try_catch(isolate);
 	  Local<Object> global=isolate->GetCurrentContext()->Global();
-	  //Local<Function> callback=Local<Function>::New(isolate,req->callback);
-	  
-	// Local<Value> argv[2]={Null(isolate),node::Buffer::New(isolate,(char*)req->result2,req->len,nullptr,nullptr).ToLocalChecked()};
-    // https://stackoverflow.com/questions/13826803/calling-javascript-function-from-a-c-callback-in-v8/28554065#28554065
-    //Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
      Local<Function> callback=Local<Function>::New(isolate,req->callback);
 if(use_makecallback){
 Local<Value> ret=node::MakeCallback(isolate,global,callback,2,argv);
 	assert(!ret.IsEmpty());
 
 }else{callback->Call(global,2,argv);}
-    
-    
-   // const char *result =(char*) work->result;//.c_str();
-   // Local<Value> argv[1] = { String::NewFromUtf8(isolate, result) };
-  //  Local<Value> argv[1]={node::Buffer::New(isolate,(char*)work->result2,work->len,nullptr,nullptr).ToLocalChecked()};
-    // https://stackoverflow.com/questions/13826803/calling-javascript-function-from-a-c-callback-in-v8/28554065#28554065
-   // Local<Function>::New(isolate, work->callback)->Call(isolate->GetCurrentContext()->Global(), 1, argv);
-    
-    req->callback.Reset();
+     req->callback.Reset();
     delete req;
-	  if(try_catch.HasCaught()){node::FatalException(isolate,try_catch);}
+	if(try_catch.HasCaught()){node::FatalException(isolate,try_catch);}
   }
   
   /**
@@ -478,10 +418,14 @@ Local<Value> ret=node::MakeCallback(isolate,global,callback,2,argv);
     
     
     async_req * req = new async_req;
+	//String::Utf8Value si(args[0]->ToString());
 	
     req->req.data = req;
-	req->input=args[0]->IntegerValue();
+	//req->input=args[0]->IntegerValue();
 	//req->output=0;
+	req->vinput=(const unsigned char*)node::Buffer::Data(args[0]->ToObject());//(const unsigned char*)args[0].As<String>();
+	req->vlen=node::Buffer::Length(args[0]);
+	//fprintf(stderr,"VLEN: %zu\n",req->vlen);
 	req->result2=nullptr;
 	req->len=0;
 	req->isolate=isolate;
@@ -491,11 +435,8 @@ Local<Value> ret=node::MakeCallback(isolate,global,callback,2,argv);
     Local<Function> callback = Local<Function>::Cast(args[1]);
     req->callback.Reset(isolate, callback);
     
-    uv_queue_work(node::GetCurrentEventLoop(isolate), &req->req, WorkAsync,(uv_after_work_cb) WorkAsyncComplete<use_makecallback>);
-    
-  // args.GetReturnValue().Set(Undefined(isolate));  
+    uv_queue_work(node::GetCurrentEventLoop(isolate), &req->req, WorkAsync,(uv_after_work_cb) WorkAsyncComplete<use_makecallback>); 
   }
-  
   
   /**
   * init function declares what we will make visible to node
@@ -504,7 +445,5 @@ Local<Value> ret=node::MakeCallback(isolate,global,callback,2,argv);
     NODE_SET_METHOD(exports, "runCall", DoTaskAsync<false>);
 	NODE_SET_METHOD(exports,"runMakeCallback",DoTaskAsync<true>);
   }
-
-  NODE_MODULE(asyncAddon, init)
-
-}  
+ NODE_MODULE(asyncAddon, init)
+}
