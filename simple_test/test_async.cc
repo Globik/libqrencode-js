@@ -88,6 +88,7 @@ size_t argc=3;
 	NAPI_CALL(env, napi_create_async_work(env,argv[1],resource_name,Execute,Complete,c, &c->_request));
 	
 	NAPI_CALL(env, napi_queue_async_work(env,c->_request));
+	//free(c);
 	return nullptr;
 	}
 

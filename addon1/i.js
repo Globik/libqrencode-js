@@ -26,7 +26,7 @@ var t=setInterval(()=>{i++;addon.runMakeCallback(buf,function(er,d){console.log(
 					   console.log('i:',i);if(i==366){suka();}},0)
 function suka(){clearInterval(t);}*/
 var boo=makeMeasurable(boo);
-boo(1);
+boo(50);
 function boo(n){
 for(var i=0;i<n;i++){
 addon.runMakeCallback(buf,function(er,d){console.log(er,d.toString('base64').substring(0,16))})
