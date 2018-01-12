@@ -6,12 +6,8 @@ const buf=Buffer.from(str+'\0');
 //ad.Test(buf,{type:'start'},function(err,val){console.log('error: ',err);console.log('val: ',val.toString());});
 
 var boo=makeMeasurable(boo);
-boo(1);
-//setTimeout(function(){
-console.log('fifa');
-boo(1);
-//},80);
-boo(50);
+
+//boo(50);
 function boo(n){
 for(var i=0;i<n;i++){
 //setTimeout(()=>{

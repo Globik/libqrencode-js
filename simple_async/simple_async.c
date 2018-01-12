@@ -380,7 +380,7 @@ void Complete(napi_env env,napi_status status, void* data){
 	//}
 	
 	if(status !=napi_ok){
-	napi_throw_type_error(env,nullptr,"execute callback failed.");
+	napi_throw_type_error(env,NULL,"execute callback failed.");
 		return;
 	}
 //napi_handle_scope scope;
@@ -412,6 +412,17 @@ status=napi_create_buffer_copy(env,c->_out_bufsize,c->_output,NULL,&argv[1]);
 	free(c);
 }
 
+static int32_t get_zifra(napi_env env,napi_value arr,int32_t zindex){
+	napi_value ret;napi_status status;
+	int32_t fk=99;
+	status=napi_get_element(env,arr,zindex,&ret);
+	if(status !=napi_ok){return fk;};
+	int32_t resi;
+	status=napi_get_value_int32(env,ret,&resi);
+	if(status !=napi_ok){return fk;}
+	return resi;
+	}
+
 napi_value Test(napi_env env,napi_callback_info info){
 size_t argc=3;
 	napi_status status;
@@ -420,9 +431,9 @@ size_t argc=3;
 	napi_value resource_name;
 	void* data;
 	carrier* c=(carrier*)malloc(sizeof(carrier));
-	napi_handle_scope scope;
-	status=napi_open_handle_scope(env,&scope);
-	assert(status==napi_ok);
+	//napi_handle_scope scope;
+	//status=napi_open_handle_scope(env,&scope);
+	//assert(status==napi_ok);
 	status=napi_get_cb_info(env,info,&argc,argv,&_this,&data);
 	assert(status==napi_ok);
 	//if(argc >3){napi_throw_type_error(env,nullptr,"not enough arguments, expected 3?.");
@@ -451,6 +462,43 @@ size_t argc=3;
 		return nullptr;
 	}	
 	*/
+	/*
+	napi_value obj=argv[1];
+	 char marg[50];
+	size_t margsize=50;
+	size_t copied;
+	napi_value propsnames;
+	status=napi_get_property_names(env,obj,&propsnames);
+		assert(status==napi_ok);
+	napi_value propstr;
+	napi_get_element(env,propsnames,0,&propstr);
+	napi_value dval;
+	
+	status=napi_get_property(env,obj,propstr,&dval);
+	assert(status==napi_ok);
+	status=napi_get_value_string_utf8(env,dval,marg,margsize,&copied);
+	fprintf(stderr,"object: %s\n",marg);
+	*/
+	napi_value arr=argv[1];
+	/*
+	uint32_t lengi; int32_t zind=0;
+	status=napi_get_array_length(env,arr,&lengi);
+	assert(status==napi_ok);
+	fprintf(stderr,"ARRAY LENGTH: %d\n",lengi);
+	napi_value ret;
+	status=napi_get_element(env,arr,0,&ret);
+	assert(status==napi_ok);
+	int32_t resi;
+	status=napi_get_value_int32(env,ret,&resi);
+	assert(status==napi_ok);
+	fprintf(stderr,"RESI: %d\n",resi);
+	*/
+	
+	int32_t mama,papa, nj=0;
+	mama=get_zifra(env,arr,0);
+	papa=get_zifra(env,arr,1);
+	fprintf(stderr,"MAMA: %d = %d\n",mama,papa);
+	
 	c->_output=NULL;
 	//status=napi_get_value_int32(env,argv[0],&the_carrier._input);
 
@@ -466,8 +514,8 @@ size_t argc=3;
 	assert(status==napi_ok);
 	status=napi_queue_async_work(env,c->_request);
 	assert(status==napi_ok);
-	napi_close_handle_scope(env,scope);
-	return nullptr;
+	//napi_close_handle_scope(env,scope);
+	return NULL;
 	}
 
 
@@ -476,7 +524,7 @@ napi_value Init(napi_env env,napi_value exports){
 napi_property_descriptor properties[]={
 	{"Test",0,Test,0,0,0,napi_default,0}
 };
-status=napi_define_properties(env,exports,sizeof(properties)/sizeof(*properties),properties);
+status=napi_define_properties(env,exports, sizeof(properties)/sizeof(*properties),properties);
 assert(status==napi_ok);
 return exports;
 }
