@@ -1,3 +1,4 @@
+//FOLDER addon1
 /*
 *   An example of an asynchronous C++ node addon.
 *   Provided by paulhauner https://github.com/paulhauner

@@ -7,3 +7,9 @@ Just a little experiment with a [node.js N-API](https://nodejs.org/dist/latest-v
 
 * libqrencode-js is about x20 times faster than [qr-node](https://github.com/xr0master/qr-node)
 * libqrencode-js is about x340 times faster than [qrcode-js](https://github.com/CloudService/qrcode-js)
+
+# directories
+
+* napi nodejs addon module prototype(async technic) in the folder simple_async
+
+* traditonal nodejs addon(C++) modeule prototype(async technic) in the folder addon1

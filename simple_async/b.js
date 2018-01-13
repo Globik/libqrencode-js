@@ -1,15 +1,23 @@
 //simple_async.cc from simple_async
 const ad=require('./build/Release/qrencode-js');
 const {makeMeasurable}=require('performance-meter');
-
+const ob={background_color:'76eec6',foreground_color:'ff0000', level:"q",dot_size:6,margin:2,micro:0,version:4}
+// -s dot_size
+// level{high=QR_ECLEVEL_H,q=QR_ECLEVEL_Q,m=QR_ECLEVEL_M,l=QR_ECLEVEL_L} => DEFAULT=L(low)
+const ob2={};
+let bn=ad.setOptions(ob);
+console.log('bn: ',bn);
+// todo: eightbit can be hardcoded, and version?(must be too)
+//micro is optional dot_size, margin are too. Colors also optional. Level? One default and then very specific
+//#76eec6
 const str="mama";
 const buf=Buffer.from(str);
-ad.Test(buf,[40,70],function(err,val){console.log('error: ',err);console.log('valA: ',val.toString());});
+ad.Test(buf,{type:"nu"},function(err,val){console.log('error: ',err);console.log('valA: ',val.toString());});
 var k=0;
 //dura();
 function dura(){
 var t=setInterval(function(){
-ad.Test(buf,[36,3],function(err,val){
+ad.Test(buf,{type:"nu"},function(err,val){
 	k++;
 	console.log('error: ',err);console.log('valA: ',val.toString('base64').substring(0,30));
 //console.log("K: ",k);
@@ -19,17 +27,20 @@ ad.Test(buf,[36,3],function(err,val){
 }
 function su(){clearInterval(t);}
 var boo=makeMeasurable(boo);
-boo(1);
+//boo(1);
 
 //margin,micro,8,caseinsetiv,color1,color2
 function boo(n){
 for(var i=0;i<n;i++){
-ad.Test(buf,[36,200],function(err,val){console.log('valA: ',val.toString('base64').substring(0,16));});	
+ad.Test(buf,{type:"nu"},function(err,val){console.log('valA: ',val.toString('base64').substring(0,16));});	
 }
 }
 var e=0;
-
-
+/*
+setTimeout(function(){
+ad.Test(buf,ob,function(err,val){console.log('valA: ',val.toString('base64').substring(0,16));});	
+},4000);
+*/
 // SYNC:  1.540ms=n1 4.318ms=n5  35.373ms=n50            //using synchronous napi and napi create_buffer_copy folder=simple_sync
 // ASYNC: 0.788=n1   1.030ms=n5  2.209ms=n=50            //napi_create_async_work and napi create_buffer_copy folder=simple_async
 // ASYNC: 0.704      1.070       9.208        2.443=n100 // using C++ uv_queue_work and new Buffer  folder=addon1

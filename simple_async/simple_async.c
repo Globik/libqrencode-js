@@ -1,5 +1,5 @@
 #include <assert.h>
-
+// SYMPL_ASYNC FOLDER
 #if HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -33,11 +33,14 @@
 
 #define INCHES_PER_METER (100.0/2.54)
 
+static int dummy_Int=10;
+
 static int casesensitive = 1;
-static int eightbit = 0;
+
+static int eightbit = 1;//0; harcoded to yes
 static int version = 0;
-static int size = 3;
-static int margin = 4;//-1;
+static int size = 3;//dot_size=number
+static int margin = -1;// margin=number
 static int dpi = 72;
 static int micro = 0;
 static QRecLevel level = QR_ECLEVEL_L;
@@ -56,7 +59,15 @@ size_t mem;
 };
 //static 
 int abba=0;
-	const int mn=41;
+const int mn=41;
+static uint32_t objectLength(napi_env,napi_value);
+static char* getString(napi_env, napi_value);
+static bool isNumber(napi_env, napi_value);
+static int32_t getZifra(napi_env, napi_value, const char*);
+static bool isString(napi_env, napi_value);
+static bool hasNamedProperty(napi_env, napi_value, const char*);
+static napi_value getNamedProperty(napi_env, napi_value, const char*);
+
 static enum imageType image_type = PNG_TYPE;
 static void my_png_write_data(png_structp png_ptr,png_bytep data,png_size_t length){
 struct mem_encode* p=(struct mem_encode*) png_get_io_ptr(png_ptr);
@@ -79,6 +90,35 @@ p->mem=mn;
 	//fprintf(stderr,"p->size: %zu\n",p->size);
 	
 }
+
+static int color_set(unsigned char color[4], const char *value)
+{
+	int len = strlen(value);
+	int i, count;
+	unsigned int col[4];
+	if(len == 6) {
+		count = sscanf(value, "%02x%02x%02x%n", &col[0], &col[1], &col[2], &len);
+		if(count < 3 || len != 6) {
+			return -1;
+		}
+		for(i = 0; i < 3; i++) {
+			color[i] = col[i];
+		}
+		color[3] = 255;
+	} else if(len == 8) {
+		count = sscanf(value, "%02x%02x%02x%02x%n", &col[0], &col[1], &col[2], &col[3], &len);
+		if(count < 4 || len != 8) {
+			return -1;
+		}
+		for(i = 0; i < 4; i++) {
+			color[i] = col[i];
+		}
+	} else {
+		return -1;
+	}
+	return 0;
+}
+
 #if HAVE_PNG
 static void fillRow(unsigned char *row, int num, const unsigned char color[])
 {
@@ -278,15 +318,17 @@ return state;
 }
 static QRcode *encode(const unsigned char *intext, int length)
 {
-	eightbit=1;
-	printf("intext: %s\n",intext);
+	//eightbit=1;
+	
 	QRcode *code;
 
 	if(micro) {
 		printf("MICRO?\n");
 		if(eightbit) {
-			
-			code = QRcode_encodeDataMQR(length, intext, version, level);
+			// version 3 or 4
+			 //code=QRcode_encodeDataMQR(4,(unsigned char*)"mama\0",4,QR_ECLEVEL_M);
+			fprintf(stderr,"FUCK!!!!!!!!!! intext %s, length: %zu, version: %d, level: %d\n",intext,length,version,level);
+			code = QRcode_encodeDataMQR(length, intext, version, /*QR_ECLEVEL_M*/level);
 		} else {
 			code = QRcode_encodeStringMQR((char *)intext, version, level, hint, casesensitive);
 		}
@@ -317,7 +359,7 @@ static struct mem_encode qrencode(const unsigned char *intext, int length, const
 
 	struct mem_encode p;
 
-	printf("image_type: %d%d\n",image_type,qrcode->version);
+	printf("image_type: %d version: %d\n",image_type,qrcode->version);
 
 	switch(image_type) {
 		case PNG_TYPE:
@@ -347,7 +389,7 @@ void Execute(napi_env env,void* data){
 	//napi_throw_type_error(env,nullptr,"wrong data parameter to Execute");
 	//	return;
 	//}
-	
+	fprintf(stderr,"DUMMY_INT IN Execute() UUUUUUUU*******************************************************: %d\n",dummy_Int);
 
 	struct mem_encode p=qrencode(c->_input,c->_bufferlength,"-");
 	
@@ -412,19 +454,9 @@ status=napi_create_buffer_copy(env,c->_out_bufsize,c->_output,NULL,&argv[1]);
 	free(c);
 }
 
-static int32_t get_zifra(napi_env env,napi_value arr,int32_t zindex){
-	napi_value ret;napi_status status;
-	int32_t fk=99;
-	status=napi_get_element(env,arr,zindex,&ret);
-	if(status !=napi_ok){return fk;};
-	int32_t resi;
-	status=napi_get_value_int32(env,ret,&resi);
-	if(status !=napi_ok){return fk;}
-	return resi;
-	}
-
 napi_value Test(napi_env env,napi_callback_info info){
 size_t argc=3;
+if(margin <= 0){if(micro){margin=2;}else{margin=4;}}
 	napi_status status;
 	napi_value argv[3];
 	napi_value _this;
@@ -462,45 +494,8 @@ size_t argc=3;
 		return nullptr;
 	}	
 	*/
-	/*
-	napi_value obj=argv[1];
-	 char marg[50];
-	size_t margsize=50;
-	size_t copied;
-	napi_value propsnames;
-	status=napi_get_property_names(env,obj,&propsnames);
-		assert(status==napi_ok);
-	napi_value propstr;
-	napi_get_element(env,propsnames,0,&propstr);
-	napi_value dval;
-	
-	status=napi_get_property(env,obj,propstr,&dval);
-	assert(status==napi_ok);
-	status=napi_get_value_string_utf8(env,dval,marg,margsize,&copied);
-	fprintf(stderr,"object: %s\n",marg);
-	*/
-	napi_value arr=argv[1];
-	/*
-	uint32_t lengi; int32_t zind=0;
-	status=napi_get_array_length(env,arr,&lengi);
-	assert(status==napi_ok);
-	fprintf(stderr,"ARRAY LENGTH: %d\n",lengi);
-	napi_value ret;
-	status=napi_get_element(env,arr,0,&ret);
-	assert(status==napi_ok);
-	int32_t resi;
-	status=napi_get_value_int32(env,ret,&resi);
-	assert(status==napi_ok);
-	fprintf(stderr,"RESI: %d\n",resi);
-	*/
-	
-	int32_t mama,papa, nj=0;
-	mama=get_zifra(env,arr,0);
-	papa=get_zifra(env,arr,1);
-	fprintf(stderr,"MAMA: %d = %d\n",mama,papa);
 	
 	c->_output=NULL;
-	//status=napi_get_value_int32(env,argv[0],&the_carrier._input);
 
 	status=napi_get_buffer_info(env, argv[0],(void**)(&c->_input),&c->_bufferlength);
 	assert(status==napi_ok);
@@ -518,14 +513,268 @@ size_t argc=3;
 	return NULL;
 	}
 
+napi_value setOptions(napi_env env,napi_callback_info info){
+size_t argc=1;
+	napi_value args[1];
+	napi_status status;
+	status=napi_get_cb_info(env,info,&argc,args,NULL,NULL);
+	assert(status==napi_ok);
+	if(argc >1){
+	status=napi_throw_type_error(env,NULL,"Wrong number of arguments! Must be 1.");
+	assert(status==napi_ok);
+	return NULL;}
+	napi_valuetype vtype;
+	status=napi_typeof(env,args[0],&vtype);
+	assert(status==napi_ok);
+	if(vtype != napi_object){
+	status=napi_throw_type_error(env,NULL,"Wrong type of arguments! xpects an object as first argument.");
+	assert(status==napi_ok);
+	return NULL;
+	}
+	napi_value obj=args[0];
+	uint32_t lind;
+	napi_value props_names;
+	status=napi_get_property_names(env,obj,&props_names);
+	assert(status==napi_ok);
+	lind=objectLength(env,props_names);
+	fprintf(stderr,"ARR LENGTH: %d\n",lind);
+	if(lind==0){
+	napi_throw_type_error(env,NULL,"A provided object must not to be empty!");
+	return NULL;}
+	const char*margi="margin";
+	bool has_p;
+	has_p=hasNamedProperty(env,obj,margi);
+	fprintf(stderr,"If OBJECT has_named_property %s? : %d\n",margi,has_p);
+	if(has_p){fprintf(stderr,"YES! MARGIN is!\n");}else{
+	fprintf(stderr,"No! MARGIN is NOT!\n");}//dummy_Int=10
+	fprintf(stderr,"DUMMY_INT BEFORE: %d\n",dummy_Int);
+	if(has_p){
+	napi_value vresi;
+	vresi=getNamedProperty(env,obj,margi);
+	int32_t dummyTwo=getZifra(env,vresi," for margin.");
+	if(dummyTwo < 0){
+	status=napi_throw_type_error(env,NULL,"Invalid margin!");
+	assert(status==napi_ok);
+	return NULL;
+	}
+		
+	margin=dummyTwo;
+	fprintf(stderr,"margin: %d\n", margin);
+	}else{
+	if(margin < 0){
+	if(micro){margin=2;}else{margin=4;}
+	}
+	}
+	bool has_dot_size;
+	const char*dotsizi="dot_size";
+	has_dot_size=hasNamedProperty(env,obj,dotsizi);
+	if(has_dot_size){
+	napi_value nres;
+	nres=getNamedProperty(env, obj, dotsizi);
+	int32_t dotSize=getZifra(env, nres, " for dot_size.");
+	if(dotSize <=0){
+	status=napi_throw_type_error(env,NULL,"Invalid dot_size.");
+	assert(status==napi_ok);
+	return NULL;
+	}
+	size=dotSize;
+	fprintf(stderr, "dot_size: %d\n", size);
+	}
+	bool has_micro;
+	const char*micri="micro";
+	has_micro=hasNamedProperty(env,obj,micri);
+	if(has_micro){
+	napi_value nres2;
+	nres2=getNamedProperty(env, obj, micri);
+	int32_t micron=getZifra(env, nres2, " for micro.");
+	if(micron == 1){micro=micron;}else{micro=0;}
+		
+	/*if(micro){
+	if(version==0){
+	status=napi_throw_type_error(env,NULL,"Version must be specified to encode a Micro QR Cide symbol.");
+	assert(status==napi_ok);
+	return NULL;
+	}
+	}*/
+
+	fprintf(stderr, "micro: %d\n", micro);
+	}
+	//version
+	bool has_version;
+	const char*versi="version";
+	has_version=hasNamedProperty(env,obj,versi);
+	if(has_version){
+	napi_value nres3;
+	nres3=getNamedProperty(env, obj, versi);
+	int32_t verson=getZifra(env, nres3, " for version.");
+	if(micro && verson > MQRSPEC_VERSION_MAX){
+	status=napi_throw_type_error(env,NULL,"Version should be less or equal to %d, MQRSPEC_VERSION_MAX");
+	assert(status==napi_ok);
+	return NULL;
+	}else if(!micro && verson > QRSPEC_VERSION_MAX){
+	status=napi_throw_type_error(env,NULL,"Version should be less or equal to qrspec_version_max.");
+	assert(status==napi_ok);
+	return NULL;	
+	}
+	version=verson;
+	if(micro){
+	if(version==0){
+	status=napi_throw_type_error(env,NULL,"Version must be specified to encode a Micro QR Cide symbol.");
+	assert(status==napi_ok);
+	return NULL;
+	}
+	}
+
+    fprintf(stderr, "version: %d\n", version);
+	}
+	
+	//level
+	bool has_level;
+	const char*leveli="level";
+	has_level=hasNamedProperty(env,obj,leveli);
+	if(has_level){
+	napi_value nres4;
+	nres4=getNamedProperty(env, obj, leveli);
+	char*lev;
+	lev=getString(env,nres4);
+	fprintf(stderr,"LEVEL: %s\n",lev);
+	if(strcmp(lev,"h")==0  || strcmp(lev,"H")==0){
+	fprintf(stderr,"HIGH LEVEL!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+	level=QR_ECLEVEL_H;
+	}else if(strcmp(lev,"m")==0  || strcmp(lev,"M")==0){
+		fprintf(stderr,"MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM: %d\n",QR_ECLEVEL_M);
+	level=QR_ECLEVEL_M;
+	}else if(strcmp(lev,"l")==0 || strcmp(lev,"L")==0){
+	level=QR_ECLEVEL_L;
+		fprintf(stderr,"LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL\n");
+	}else if(strcmp(lev,"q")==0 || strcmp(lev,"Q")==0){
+	level=QR_ECLEVEL_Q;
+		fprintf(stderr,"QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ\n");
+	}else{
+	fprintf(stderr,"UNKNOWN LEVEL TYPE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+	status=napi_throw_type_error(env,NULL,"Invalid level.");
+	assert(status==napi_ok);
+	return NULL;
+	}
+	}
+	
+	//colors
+	bool has_b;
+	const char*backi="background_color";
+	has_b=hasNamedProperty(env,obj,backi);
+	if(has_b){
+	napi_value nres5;
+	nres5=getNamedProperty(env, obj, backi);
+	char*coli_b;
+	coli_b=getString(env,nres5);
+	fprintf(stderr,"Color background: %s\n",coli_b);
+	if(color_set(bg_color,coli_b)){
+	status=napi_throw_type_error(env,NULL,"Invalid background color value.");
+	assert(status==napi_ok);
+	return NULL;
+		}
+	}
+	
+	// colors f
+	
+	bool has_f;
+	const char*fori="foreground_color";
+	has_f=hasNamedProperty(env,obj,fori);
+	if(has_f){
+	napi_value nres6;
+	nres6=getNamedProperty(env, obj, fori);
+	char*coli_f;
+	coli_f=getString(env,nres6);
+	fprintf(stderr,"Color foreground: %s\n",coli_f);
+	if(color_set(fg_color,coli_f)){
+	status=napi_throw_type_error(env,NULL,"Invalid foreground color value.");
+	assert(status==napi_ok);
+	return NULL;
+		}
+	}
+	return NULL;
+}
 
 napi_value Init(napi_env env,napi_value exports){
 	napi_status status;
 napi_property_descriptor properties[]={
-	{"Test",0,Test,0,0,0,napi_default,0}
+	{"Test",0,Test,0,0,0,napi_default,0},
+	{"setOptions",0,setOptions,0,0,0,napi_default,0}
 };
 status=napi_define_properties(env,exports, sizeof(properties)/sizeof(*properties),properties);
 assert(status==napi_ok);
 return exports;
 }
 NAPI_MODULE(addon,Init)
+	
+	
+uint32_t objectLength(napi_env env, napi_value prop_names){
+napi_status status;
+uint32_t lindex;
+status=napi_get_array_length(env,prop_names,&lindex);
+assert(status==napi_ok);
+fprintf(stderr,"arr length: %d\n",lindex);
+return lindex;
+}
+char* getString(napi_env env,napi_value js_str){
+char st[50];
+size_t st_size=50;
+napi_status status;
+if(isString(env,js_str)){
+status=napi_get_value_string_utf8(env,js_str,st,st_size,NULL);
+assert(status==napi_ok);
+return st;
+}
+return NULL;
+}
+bool isNumber(napi_env env,napi_value nnumber){
+napi_status status;
+napi_valuetype t;
+status=napi_typeof(env,nnumber,&t);
+assert(status==napi_ok);
+if(t == napi_number) return 1;
+return 0;
+}
+
+int32_t getZifra(napi_env env,napi_value nresult,const char*er){
+int32_t zfr;
+char foo[100];
+char*f="Expected a number";
+napi_status status;
+if(isNumber(env,nresult)){
+status=napi_get_value_int32(env,nresult,&zfr);
+assert(status==napi_ok);
+return zfr;
+}else{
+strcpy(foo,f);
+if(er) {
+strcat(foo,er);
+}
+napi_throw_type_error(env,NULL,foo);
+return zfr;
+}}
+
+bool isString(napi_env env,napi_value str){
+napi_status status;
+napi_valuetype vtype;
+status=napi_typeof(env,str,&vtype);
+assert(status==napi_ok);
+if(vtype == napi_string) return 1;
+return 0;
+}
+
+bool hasNamedProperty(napi_env env,napi_value obj,const char*s){
+bool hasp;
+napi_status status;
+status=napi_has_named_property(env,obj,s,&hasp);//1=YES! 0=NO!
+assert(status==napi_ok);
+	if(status !=napi_ok) return 0;
+return hasp;
+}
+
+napi_value getNamedProperty(napi_env env,napi_value obj,const char*s){
+napi_value vresi;napi_status status;
+status=napi_get_named_property(env,obj,s,&vresi);// displays the value of key "suka" to the vresi
+assert(status==napi_ok);
+return vresi;
+}
