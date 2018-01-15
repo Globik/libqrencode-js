@@ -1,0 +1,15 @@
+{
+"targets":[
+{"target_name":"liblibqrenca","type":"static_library",
+"sources":["bitstream.c","mask.c","qrencode.c","qrspec.c","mmask.c","rsecc.c","mqrspec.c","qrinput.c","split.c"],
+"direct_dependent_settings":{"include_dirs":["."]},
+ "defines":["HAVE_PNG","STATIC_IN_RELEASE=static","MAJOR_VERSION=4","MICRO_VERSION=0","MINOR_VERSION=0","VERSION=\"4.0.0\""]
+},
+{"target_name":"liblibqrencd","type":"shared_library",
+"sources":["bitstream.c","mask.c","qrencode.c","qrspec.c","mmask.c","rsecc.c","mqrspec.c","qrinput.c","split.c"],
+"direct_dependent_settings":{"include_dirs":["."]},
+ "defines":["HAVE_PNG","STATIC_IN_RELEASE=static","MAJOR_VERSION=4","MICRO_VERSION=0","MINOR_VERSION=0","VERSION=\"4.0.0\""]
+}
+
+]
+}

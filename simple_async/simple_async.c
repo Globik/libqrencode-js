@@ -61,7 +61,7 @@ size_t mem;
 int abba=0;
 const int mn=41;
 static uint32_t objectLength(napi_env,napi_value);
-static char* getString(napi_env, napi_value);
+static const char* getString(napi_env, napi_value);
 static bool isNumber(napi_env, napi_value);
 static int32_t getZifra(napi_env, napi_value, const char*);
 static bool isString(napi_env, napi_value);
@@ -635,7 +635,7 @@ size_t argc=1;
 	if(has_level){
 	napi_value nres4;
 	nres4=getNamedProperty(env, obj, leveli);
-	char*lev;
+	const char*lev;
 	lev=getString(env,nres4);
 	fprintf(stderr,"LEVEL: %s\n",lev);
 	if(strcmp(lev,"h")==0  || strcmp(lev,"H")==0){
@@ -659,13 +659,13 @@ size_t argc=1;
 	}
 	
 	//colors
-	bool has_b;
+	bool has_b;const char*coli_b="white";
 	const char*backi="background_color";
 	has_b=hasNamedProperty(env,obj,backi);
 	if(has_b){
 	napi_value nres5;
 	nres5=getNamedProperty(env, obj, backi);
-	char*coli_b;
+	//char*coli_b;
 	coli_b=getString(env,nres5);
 	fprintf(stderr,"Color background: %s\n",coli_b);
 	if(color_set(bg_color,coli_b)){
@@ -678,12 +678,12 @@ size_t argc=1;
 	// colors f
 	
 	bool has_f;
-	const char*fori="foreground_color";
+	const char*fori="foreground_color";const char*coli_f="Black";
 	has_f=hasNamedProperty(env,obj,fori);
 	if(has_f){
 	napi_value nres6;
 	nres6=getNamedProperty(env, obj, fori);
-	char*coli_f;
+	//char*coli_f;
 	coli_f=getString(env,nres6);
 	fprintf(stderr,"Color foreground: %s\n",coli_f);
 	if(color_set(fg_color,coli_f)){
@@ -692,7 +692,52 @@ size_t argc=1;
 	return NULL;
 		}
 	}
-	return NULL;
+	napi_value qr_version,qr_margin,qr_level, qr_size,qr_versi,qr_micro,qr_background_color,qr_foreground_color,qr_full_version;
+	napi_value object;
+	//background_color:'76eec6',foreground_color:'ff0000'
+	status=napi_create_string_utf8(env,"Copyright (C) 2006-2017 Kentaro Fukuchi.",NAPI_AUTO_LENGTH,&qr_version);
+	assert(status==napi_ok);
+	status=napi_create_string_utf8(env,(const char*)coli_b,NAPI_AUTO_LENGTH,&qr_background_color);
+	assert(status==napi_ok);
+	status=napi_create_string_utf8(env,(const char*)coli_f,NAPI_AUTO_LENGTH,&qr_foreground_color);
+	assert(status==napi_ok);
+	status=napi_create_string_utf8(env,QRcode_APIVersionString(),NAPI_AUTO_LENGTH,&qr_full_version);
+	assert(status==napi_ok);
+	status=napi_create_int32(env,level,&qr_level);
+	assert(status==napi_ok);
+	status=napi_create_int32(env,margin,&qr_margin);
+	assert(status==napi_ok);
+	status=napi_create_int32(env,size,&qr_size);
+	assert(status==napi_ok);
+	status=napi_create_int32(env,version,&qr_versi);
+	assert(status==napi_ok);
+	status=napi_create_int32(env,micro,&qr_micro);
+	assert(status==napi_ok);
+	status=napi_create_object(env,&object);
+	assert(status==napi_ok);
+	status=napi_set_named_property(env,object,"full_version",qr_full_version);
+	assert(status==napi_ok);
+	status=napi_set_named_property(env,object,"copyright",qr_version);
+	assert(status==napi_ok);
+	status=napi_set_named_property(env,object,"margin",qr_margin);
+	assert(status==napi_ok);
+	status=napi_set_named_property(env,object,"level",qr_level);
+	assert(status==napi_ok);
+	
+	status=napi_set_named_property(env,object,"size",qr_size);
+	assert(status==napi_ok);
+	
+	status=napi_set_named_property(env,object,"micro",qr_micro);
+	assert(status==napi_ok);
+	status=napi_set_named_property(env,object,"version",qr_versi);
+	assert(status==napi_ok);
+	
+	status=napi_set_named_property(env,object,"bg_color",qr_background_color);
+	assert(status==napi_ok);
+	
+	status=napi_set_named_property(env,object,"fg_color",qr_foreground_color);
+	assert(status==napi_ok);
+	return object;
 }
 
 napi_value Init(napi_env env,napi_value exports){
@@ -716,14 +761,15 @@ assert(status==napi_ok);
 fprintf(stderr,"arr length: %d\n",lindex);
 return lindex;
 }
-char* getString(napi_env env,napi_value js_str){
+const char* getString(napi_env env,napi_value js_str){
 char st[50];
 size_t st_size=50;
 napi_status status;
 if(isString(env,js_str)){
 status=napi_get_value_string_utf8(env,js_str,st,st_size,NULL);
 assert(status==napi_ok);
-return st;
+	const char*du=st;
+return du;
 }
 return NULL;
 }

@@ -1,7 +1,7 @@
 //simple_async.cc from simple_async
 const ad=require('./build/Release/qrencode-js');
 const {makeMeasurable}=require('performance-meter');
-const ob={background_color:'76eec6',foreground_color:'ff0000', level:"q",dot_size:6,margin:2,micro:0,version:4}
+const ob={/*background_color:'76eec6',*/foreground_color:'ff0000', level:"q",dot_size:6,margin:2,micro:0,version:4}
 // -s dot_size
 // level{high=QR_ECLEVEL_H,q=QR_ECLEVEL_Q,m=QR_ECLEVEL_M,l=QR_ECLEVEL_L} => DEFAULT=L(low)
 const ob2={};
@@ -27,7 +27,7 @@ ad.Test(buf,{type:"nu"},function(err,val){
 }
 function su(){clearInterval(t);}
 var boo=makeMeasurable(boo);
-//boo(1);
+boo(1);
 
 //margin,micro,8,caseinsetiv,color1,color2
 function boo(n){

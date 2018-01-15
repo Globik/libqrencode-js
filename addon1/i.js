@@ -26,7 +26,7 @@ var t=setInterval(()=>{i++;addon.runMakeCallback(buf,function(er,d){console.log(
 					   console.log('i:',i);if(i==366){suka();}},0)
 function suka(){clearInterval(t);}*/
 var boo=makeMeasurable(boo);
-boo(50);
+boo(1);
 function boo(n){
 for(var i=0;i<n;i++){
 addon.runMakeCallback(buf,function(er,d){console.log(er,d.toString('base64').substring(0,16))})
@@ -34,3 +34,5 @@ addon.runMakeCallback(buf,function(er,d){console.log(er,d.toString('base64').sub
 }
 
 // 0.712ms=n1 0.989ms=n5 2.092ms=n50 runCall method
+//-d --directory --out
+//node_modules/cmake-js/bin/cmake-js -d addon1/deps/libqrencode -D
